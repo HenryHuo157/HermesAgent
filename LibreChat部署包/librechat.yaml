@@ -1,0 +1,30 @@
+version: 1.2.1
+cache: true
+
+# ============================================================
+# 二选一（或都保留，前端可切换）：
+#  1) Hermes —— 完整 Agent 能力（沙盒执行/代码/文件/技能）
+#  2) OpenRouter 直连 —— 纯聊天，无工具，最简单
+# 填好自己的 Key，另一个段可整段删除。
+# ============================================================
+
+endpoints:
+  custom:
+    - name: "Hermes"
+      apiKey: "填你自己的HERMES_API_SERVER_KEY"
+      baseURL: "http://你的服务器IP:8642/v1"
+      models:
+        default: ["hermes-agent"]
+        fetch: false
+      titleConvo: true
+      titleModel: "hermes-agent"
+      summaryModel: "hermes-agent"
+
+    - name: "OpenRouter"
+      apiKey: "填你自己的sk-or-v1-开头的Key"
+      baseURL: "https://openrouter.ai/api/v1"
+      models:
+        default: ["z-ai/glm-5.3-flash"]
+        fetch: true
+      titleConvo: true
+      titleModel: "z-ai/glm-5.3-flash"

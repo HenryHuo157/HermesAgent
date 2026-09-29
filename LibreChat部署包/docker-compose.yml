@@ -1,0 +1,19 @@
+services:
+  api:
+    image: registry.librechat.ai/librechat-ai/librechat-dev:latest
+    container_name: librechat-api
+    ports:
+      - "127.0.0.1:3080:3080"
+    depends_on:
+      - mongodb
+    env_file: .env
+    volumes:
+      - ./librechat.yaml:/app/librechat.yaml
+      - ./images:/app/client/public/images
+    restart: always
+  mongodb:
+    image: mongo:8.0.20
+    container_name: librechat-mongo
+    volumes:
+      - ./data-node:/data/db
+    restart: always

@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>团队 AI 助手</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>">
+<style>
+  :root{
+    --bg:#f7f7f8; --panel:#ffffff; --panel2:#fbfbfd;
+    --ink:#0f172a; --sub:#64748b; --faint:#94a3b8;
+    --line:#e2e8f0; --line2:#eef2f7;
+    --brand:#4f46e5; --brand2:#2563eb;
+    --grad:linear-gradient(135deg,#4f46e5,#2563eb);
+    --code-bg:#f8fafc; --code-ink:#334155;
+    --shadow:0 1px 3px rgba(15,23,42,.06),0 8px 24px rgba(15,23,42,.06);
+    --shadow-lg:0 4px 12px rgba(15,23,42,.08),0 24px 48px rgba(15,23,42,.12);
+    --danger:#dc2626; --ok:#059669;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#0b0e14; --panel:#11151d; --panel2:#151a24;
+      --ink:#e6eaf2; --sub:#8b93a5; --faint:#5b6474;
+      --line:#1f2530; --line2:#181d27;
+      --code-bg:#0d1117; --code-ink:#c9d1d9;
+      --shadow:0 1px 3px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.25);
+      --shadow-lg:0 4px 12px rgba(0,0,0,.4),0 24px 48px rgba(0,0,0,.5);
+    }
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","Segoe UI",sans-serif;
+    background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;
+  }
+  button{font-family:inherit}
+  [hidden]{display:none !important}
+
+  /* ============ 登录页 ============ */
+  #login{
+    min-height:100%;display:flex;align-items:center;justify-content:center;
+    padding:24px;position:fixed;inset:0;z-index:100;background:var(--bg);
+    background-image:radial-gradient(60% 50% at 50% 0%,rgba(79,70,229,.08),transparent);
+  }
+  .login-card{
+    width:100%;max-width:384px;background:var(--panel);border:1px solid var(--line);
+    border-radius:20px;padding:36px 32px;box-shadow:var(--shadow-lg);
+    animation:rise .45s cubic-bezier(.16,1,.3,1);
+  }
+  @keyframes rise{from{opacity:0;transform:translateY(14px) scale(.98)}to{opacity:1;transform:none}}
+  .login-logo{
+    width:56px;height:56px;border-radius:16px;background:var(--grad);
+    display:flex;align-items:center;justify-content:center;font-size:30px;
+    margin:0 auto 16px;box-shadow:0 8px 20px rgba(79,70,229,.35);
+  }
+  .login-card h1{font-size:20px;text-align:center;font-weight:700;letter-spacing:.2px}
+  .login-card .sub{text-align:center;color:var(--sub);font-size:13.5px;margin:6px 0 26px}
+  .field{margin-bottom:14px}
+  .field label{display:block;font-size:13px;font-weight:600;color:var(--sub);margin-bottom:6px}
+  .field input{
+    width:100%;padding:11px 14px;border:1px solid var(--line);border-radius:12px;
+    background:var(--panel2);color:var(--ink);font-size:15px;outline:none;
+    transition:border-color .15s, box-shadow .15s;
+  }
+  .field input:focus{border-color:var(--brand);box-shadow:0 0 0 3px rgba(79,70,229,.15)}
+  .login-err{
+    color:var(--danger);font-size:13px;margin:2px 0 10px;display:none;
+    background:rgba(220,38,38,.08);border-radius:10px;padding:8px 12px;
+  }
+  .login-btn{
+    width:100%;padding:12px;border:none;border-radius:12px;background:var(--grad);
+    color:#fff;font-size:15px;font-weight:600;cursor:pointer;margin-top:4px;
+    transition:transform .1s, box-shadow .15s;box-shadow:0 4px 14px rgba(79,70,229,.35);
+  }
+  .login-btn:hover{transform:translateY(-1px)}
+  .login-btn:active{transform:none}
+  .login-btn:disabled{opacity:.6;cursor:wait}
+  .login-hint{text-align:center;color:var(--faint);font-size:12px;margin-top:18px}
+
+  /* ============ 应用框架 ============ */
+  #app{height:100%;display:flex;flex-direction:column}
+  header{
+    position:sticky;top:0;z-index:10;
+    display:flex;align-items:center;gap:10px;padding:10px 16px;
+    background:color-mix(in srgb, var(--panel) 82%, transparent);
+    backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+    border-bottom:1px solid var(--line2);
+  }
+  .hd-logo{
+    width:30px;height:30px;border-radius:9px;background:var(--grad);
+    display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;
+  }
+  header h1{font-size:15px;font-weight:700;flex:1;letter-spacing:.2px}
+  header h1 small{font-weight:400;color:var(--faint);font-size:11.5px;margin-left:8px}
+  .icon-btn{
+    height:34px;padding:0 13px;border:1px solid var(--line);border-radius:10px;
+    background:var(--panel);color:var(--ink);font-size:13px;cursor:pointer;
+    display:inline-flex;align-items:center;gap:6px;transition:all .15s;white-space:nowrap;
+  }
+  .icon-btn:hover{border-color:var(--brand);color:var(--brand);background:var(--panel2)}
+
+  /* ============ 聊天区 ============ */
+  #chat{flex:1;overflow-y:auto;scroll-behavior:smooth}
+  .wrap{max-width:760px;margin:0 auto;padding:28px 20px 16px;display:flex;flex-direction:column;gap:26px}
+  .row{display:flex;gap:12px;animation:rise .3s cubic-bezier(.16,1,.3,1)}
+  .row.user{justify-content:flex-end}
+  .avatar{
+    width:32px;height:32px;border-radius:50%;flex-shrink:0;margin-top:2px;
+    display:flex;align-items:center;justify-content:center;font-size:15px;
+    background:var(--grad);box-shadow:0 2px 8px rgba(79,70,229,.3);
+  }
+  .bubble{
+    max-width:86%;padding:11px 16px;border-radius:18px;font-size:15px;line-height:1.7;
+    background:var(--grad);color:#fff;border-bottom-right-radius:6px;
+    box-shadow:0 2px 10px rgba(37,99,235,.25);word-break:break-word;white-space:pre-wrap;
+  }
+  .ai-body{max-width:86%;font-size:15px;line-height:1.75;word-break:break-word;min-width:0}
+  .ai-body p{margin:0 0 10px}
+  .ai-body p:last-child{margin:0}
+  .ai-body pre{
+    background:var(--code-bg);border:1px solid var(--line);color:var(--code-ink);
+    border-radius:12px;padding:13px 15px;overflow-x:auto;margin:10px 0;
+    font-size:13px;line-height:1.55;font-family:ui-monospace,'Cascadia Code',Consolas,monospace;
+  }
+  .ai-body code{font-family:ui-monospace,Consolas,monospace;font-size:.9em}
+  .ai-body :not(pre)>code{background:var(--line2);padding:1.5px 6px;border-radius:6px;color:var(--brand)}
+  .ai-body a{color:var(--brand2);text-decoration:none;border-bottom:1px dashed var(--brand2)}
+  .ai-body h1,.ai-body h2,.ai-body h3{font-size:1.05em;margin:14px 0 8px}
+  .tools{display:flex;flex-direction:column;gap:6px;margin:4px 0 10px}
+  .chip{
+    display:inline-flex;align-items:center;gap:7px;align-self:flex-start;
+    background:var(--panel);border:1px solid var(--line);border-radius:999px;
+    padding:4px 13px;font-size:12.5px;color:var(--sub);max-width:100%;
+    animation:rise .25s ease;
+  }
+  .chip .lbl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:420px}
+  .chip.done{color:var(--ok);border-color:color-mix(in srgb,var(--ok) 35%, var(--line))}
+  .spin{width:11px;height:11px;border:2px solid var(--faint);border-top-color:transparent;
+    border-radius:50%;animation:rot .7s linear infinite;flex-shrink:0}
+  @keyframes rot{to{transform:rotate(360deg)}}
+  .dots{display:inline-flex;gap:5px;padding:6px 2px}
+  .dots i{width:7px;height:7px;border-radius:50%;background:var(--faint);animation:bnc 1.2s infinite}
+  .dots i:nth-child(2){animation-delay:.15s}.dots i:nth-child(3){animation-delay:.3s}
+  @keyframes bnc{0%,60%,100%{transform:translateY(0);opacity:.4}30%{transform:translateY(-5px);opacity:1}}
+  .err-box{
+    max-width:86%;background:rgba(220,38,38,.07);border:1px solid rgba(220,38,38,.25);
+    color:var(--danger);border-radius:14px;padding:10px 16px;font-size:14px;line-height:1.6;
+  }
+
+  /* 空状态 */
+  #empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    padding:24px;text-align:center;animation:rise .4s ease}
+  #empty .hero{
+    width:76px;height:76px;border-radius:24px;background:var(--grad);font-size:40px;
+    display:flex;align-items:center;justify-content:center;margin-bottom:20px;
+    box-shadow:0 12px 32px rgba(79,70,229,.35);
+  }
+  #empty h2{font-size:22px;font-weight:700;margin-bottom:8px;letter-spacing:.3px}
+  #empty .sub2{color:var(--sub);font-size:14px;margin-bottom:30px}
+  .sugg{display:grid;grid-template-columns:repeat(2,minmax(0,270px));gap:12px;width:100%;max-width:580px}
+  .sugg button{
+    background:var(--panel);border:1px solid var(--line);border-radius:16px;
+    padding:15px 17px;text-align:left;cursor:pointer;color:var(--ink);
+    transition:all .18s cubic-bezier(.16,1,.3,1);
+  }
+  .sugg button:hover{border-color:var(--brand);transform:translateY(-2px);box-shadow:var(--shadow)}
+  .sugg .em{font-size:19px;margin-right:8px}
+  .sugg .t{font-size:14.5px;font-weight:600}
+  .sugg small{display:block;color:var(--faint);margin-top:4px;font-size:12px;font-weight:400}
+
+  /* ============ 输入区 ============ */
+  footer{padding:10px 16px calc(14px + env(safe-area-inset-bottom));
+    background:linear-gradient(transparent,var(--bg) 40%)}
+  .composer{
+    max-width:760px;margin:0 auto;background:var(--panel);border:1px solid var(--line);
+    border-radius:22px;box-shadow:var(--shadow);padding:8px 8px 8px 18px;
+    display:flex;gap:10px;align-items:flex-end;transition:border-color .15s,box-shadow .15s;
+  }
+  .composer:focus-within{border-color:var(--brand);box-shadow:0 0 0 3px rgba(79,70,229,.12),var(--shadow)}
+  #input{
+    flex:1;border:none;background:transparent;color:var(--ink);font-size:15px;
+    font-family:inherit;resize:none;max-height:160px;min-height:36px;outline:none;
+    line-height:1.55;padding:7px 0;
+  }
+  #input::placeholder{color:var(--faint)}
+  #send{
+    width:38px;height:38px;border-radius:50%;border:none;cursor:pointer;flex-shrink:0;
+    background:var(--grad);color:#fff;font-size:15px;display:flex;align-items:center;justify-content:center;
+    transition:transform .12s,opacity .15s;
+  }
+  #send:hover{transform:scale(1.06)}
+  #send:disabled{opacity:.35;cursor:default;transform:none}
+  #stop{display:none;width:38px;height:38px;border-radius:50%;border:none;cursor:pointer;flex-shrink:0;
+    background:rgba(220,38,38,.12);color:var(--danger);font-size:12px}
+  .hint{max-width:760px;margin:7px auto 0;font-size:11px;color:var(--faint);text-align:center}
+
+  /* ============ 文件面板 ============ */
+  #filesView{
+    position:fixed;inset:0;z-index:50;background:color-mix(in srgb, var(--bg) 65%, transparent);
+    backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:20px;
+    animation:fade .2s ease;
+  }
+  @keyframes fade{from{opacity:0}to{opacity:1}}
+  .files-panel{
+    width:100%;max-width:520px;max-height:82vh;background:var(--panel);border:1px solid var(--line);
+    border-radius:20px;box-shadow:var(--shadow-lg);display:flex;flex-direction:column;overflow:hidden;
+    animation:rise .25s cubic-bezier(.16,1,.3,1);
+  }
+  .files-head{display:flex;align-items:center;gap:10px;padding:16px 18px;border-bottom:1px solid var(--line2)}
+  .files-head h3{font-size:15.5px;font-weight:700;flex:1}
+  .files-list{overflow-y:auto;padding:8px}
+  .frow{
+    display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:12px;
+    transition:background .12s;
+  }
+  .frow:hover{background:var(--panel2)}
+  .fico{width:36px;height:36px;border-radius:10px;background:var(--line2);
+    display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+  .fmeta{flex:1;min-width:0}
+  .fname{font-size:14px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .fsize{font-size:11.5px;color:var(--faint);margin-top:2px}
+  .dl-btn{
+    border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:9px;
+    padding:6px 12px;font-size:12.5px;cursor:pointer;white-space:nowrap;transition:all .15s;
+  }
+  .dl-btn:hover{border-color:var(--brand);color:var(--brand)}
+  .fempty{padding:40px;text-align:center;color:var(--faint);font-size:13.5px}
+
+  @media (max-width:640px){
+    .bubble,.ai-body,.err-box{max-width:100%}
+    .sugg{grid-template-columns:1fr}
+    .chip .lbl{max-width:180px}
+    header h1 small{display:none}
+  }
+</style>
+</head>
+<body>
+
+<!-- ==================== 登录页 ==================== -->
+<div id="login" hidden>
+  <div class="login-card">
+    <div class="login-logo">🤖</div>
+    <h1>团队 AI 助手</h1>
+    <div class="sub">登录后开始使用 · 云端沙盒，不碰你的电脑</div>
+    <div class="field">
+      <label>用户名</label>
+      <input id="li-user" autocomplete="username" spellcheck="false" placeholder="team">
+    </div>
+    <div class="field">
+      <label>密码</label>
+      <input id="li-pass" type="password" autocomplete="current-password" placeholder="请输入密码">
+    </div>
+    <div class="login-err" id="li-err"></div>
+    <button class="login-btn" id="li-btn">登 录</button>
+    <div class="login-hint">账号密码请联系管理员获取</div>
+  </div>
+</div>
+
+<!-- ==================== 主应用 ==================== -->
+<div id="app" hidden>
+  <header>
+    <div class="hd-logo">🤖</div>
+    <h1>团队 AI 助手<small>云端沙盒 · 安全隔离</small></h1>
+    <button class="icon-btn" id="btnFiles">📁 文件</button>
+    <button class="icon-btn" id="btnNew">✨ 新对话</button>
+    <button class="icon-btn" id="btnOut" title="退出登录">⎋</button>
+  </header>
+
+  <main id="chat">
+    <div class="wrap" id="wrap"></div>
+    <div id="empty" hidden>
+      <div class="hero">👋</div>
+      <h2>你好，我是团队 AI 助手</h2>
+      <div class="sub2">写文档 · 跑数据 · 做脚本 · 查资料 —— 直接说，我在云端帮你干</div>
+      <div class="sugg">
+        <button data-q="帮我写一份本周工作周报的模板，包含本周完成、数据亮点、下周计划三个部分"><span class="em">✍️</span><span class="t">帮我写周报</span><small>模板 / 文案 / 邮件</small></button>
+        <button data-q="我会发一个 CSV 文件给你，帮我按月份汇总销售额并算出环比增长率"><span class="em">📊</span><span class="t">分析数据</span><small>表格汇总 / 统计 / 图表</small></button>
+        <button data-q="帮我写一个 Python 脚本：批量把某个文件夹里的图片统一缩放到 1080 宽，并打包给我"><span class="em">🐍</span><span class="t">写个脚本</span><small>自动化重复工作</small></button>
+        <button data-q="帮我查一下最近一周 AI 领域的重要新闻，整理成 5 条要点"><span class="em">🌐</span><span class="t">查点资料</span><small>搜索 / 翻译 / 摘要</small></button>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <div class="composer">
+      <textarea id="input" rows="1" placeholder="输入你的任务，Enter 发送 · Shift+Enter 换行"></textarea>
+      <button id="send" title="发送">➤</button>
+      <button id="stop" title="停止">■</button>
+    </div>
+    <div class="hint">AI 在云端服务器执行操作 · 生成的文件点「📁 文件」下载 · 请勿发送公司机密</div>
+  </footer>
+</div>
+
+<!-- ==================== 文件面板 ==================== -->
+<div id="filesView" hidden>
+  <div class="files-panel">
+    <div class="files-head">
+      <h3>📁 共享文件</h3>
+      <button class="icon-btn" id="filesClose">← 返回</button>
+    </div>
+    <div class="files-list" id="filesList"></div>
+  </div>
+</div>
+
+<script>
+/* =============== 认证 =============== */
+const AUTH_KEY = 'teamai_auth';
+// 全角转半角（中文输入法常见坑：全角字母/数字导致密码错误）
+function norm(s){
+  return String(s).replace(/[\uff01-\uff5e]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xfee0))
+                  .replace(/\u3000/g,' ').trim();
+}
+function basicHeader(){
+  const b64 = localStorage.getItem(AUTH_KEY);
+  return b64 ? {'Authorization':'Basic '+b64} : null;
+}
+function makeB64(u,p){ return btoa(norm(u)+':'+norm(p)); }
+async function verifyCreds(b64){
+  try{
+    const r = await fetch('/files/', {headers:{'Authorization':'Basic '+b64}, cache:'no-store'});
+    return r.status === 200;
+  }catch(e){ return false; }
+}
+
+/* =============== 配置 =============== */
+const LS_CHAT = 'teamai_chat_v1';
+const MAX_SEND = 24;
+const SYSTEM_PROMPT = [
+  '你是团队的 AI 助手，运行在一台云端沙盒服务器上，服务一群不懂技术的业务同事。请遵守：',
+  '1. 始终用简体中文回复，语气友好，少用术语；专业内容给出简短解释。',
+  '2. 你可以直接执行命令、读写文件、运行代码，放心操作，不会影响任何人的电脑。',
+  '3. 凡是生成给用户的交付物文件（文档、表格、脚本、图片等），必须保存到 /srv/hermes-share/ 目录，并在回复末尾附上 markdown 链接，格式：[文件名](/files/文件名)。',
+  '4. 这是团队共享环境：不要删除或覆盖 /srv/hermes-share/ 里已有的其他文件；下载类临时文件放 /tmp。',
+  '5. 回复保持精炼，先给结论，再给细节。'
+].join('\n');
+
+/* =============== 状态 =============== */
+let history = [];
+let busy = false, ctrl = null;
+const $ = id => document.getElementById(id);
+
+/* =============== 登录流程 =============== */
+/* 免登录模式：打开即用。想恢复登录界面，把 AUTO_LOGIN 改为 false */
+const AUTO_LOGIN = true;
+const AUTO_USER = 'team';
+const AUTO_PASS = 'REDACTED-SET-ON-SERVER';
+
+async function boot(){
+  let b64 = localStorage.getItem(AUTH_KEY);
+  if(!b64 && AUTO_LOGIN) b64 = makeB64(AUTO_USER, AUTO_PASS);
+  if(b64 && await verifyCreds(b64)){
+    localStorage.setItem(AUTH_KEY, b64);
+    $('login').hidden = true; $('app').hidden = false; startApp();
+  }else{
+    localStorage.removeItem(AUTH_KEY);
+    $('app').hidden = true; $('login').hidden = false;
+    $('li-user').focus();
+  }
+}
+async function doLogin(){
+  const u = $('li-user').value, p = $('li-pass').value;
+  const err = $('li-err');
+  if(!u || !p){ err.textContent = '请输入用户名和密码'; err.style.display='block'; return; }
+  $('li-btn').disabled = true; $('li-btn').textContent = '验证中…';
+  const ok = await verifyCreds(makeB64(u,p));
+  $('li-btn').disabled = false; $('li-btn').textContent = '登 录';
+  if(ok){
+    localStorage.setItem(AUTH_KEY, makeB64(u,p));
+    $('li-pass').value=''; err.style.display='none';
+    boot();
+  }else{
+    err.textContent = '用户名或密码不正确，请重试（注意大小写，可复制粘贴）';
+    err.style.display = 'block'; $('li-pass').select();
+  }
+}
+$('li-btn').onclick = doLogin;
+$('li-pass').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+$('li-user').addEventListener('keydown', e => { if(e.key==='Enter') $('li-pass').focus(); });
+
+/* =============== Markdown 迷你渲染 =============== */
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function inlineMd(s){
+  return s
+    .replace(/`([^`\n]+)`/g,'<code>$1</code>')
+    .replace(/\*\*([^*\n]+)\*\*/g,'<strong>$1</strong>')
+    .replace(/^#{1,3}\s+(.+)$/gm,'<strong>$1</strong>')
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+|\/files\/[^)\s]+)\)/g,
+             '<a href="$2" target="_blank" rel="noopener">📎 $1</a>')
+    .replace(/\n/g,'<br>');
+}
+function md(text){
+  const parts = String(text).split(/```/);
+  let html = '';
+  for(let i=0;i<parts.length;i++){
+    if(i%2===0){ html += '<p>'+ (inlineMd(esc(parts[i])) || '') +'</p>'; }
+    else{
+      let body = parts[i];
+      const nl = body.indexOf('\n');
+      const first = nl>=0 ? body.slice(0,nl).trim() : '';
+      if(first && !/\s/.test(first)) body = body.slice(nl+1);
+      html += '<pre><code>'+esc(body)+'</code></pre>';
+    }
+  }
+  return html || '';
+}
+
+/* =============== 聊天渲染 =============== */
+const wrap=$('wrap'), chat=$('chat'), input=$('input'),
+      sendBtn=$('send'), stopBtn=$('stop'), emptyEl=$('empty');
+let stick = true;
+chat.addEventListener('scroll',()=>{ stick = chat.scrollHeight - chat.scrollTop - chat.clientHeight < 60; });
+function scrollBottom(){ if(stick) chat.scrollTop = chat.scrollHeight; }
+function refreshEmpty(){ emptyEl.hidden = history.length>0 || busy; }
+
+function addUser(text){
+  const d=document.createElement('div'); d.className='row user';
+  d.innerHTML='<div class="bubble"></div>';
+  d.querySelector('.bubble').textContent=text;
+  wrap.appendChild(d); scrollBottom();
+}
+function addAI(){
+  const d=document.createElement('div'); d.className='row';
+  d.innerHTML='<div class="avatar">🤖</div><div class="ai-body"><span class="dots"><i></i><i></i><i></i></span></div>';
+  wrap.appendChild(d); scrollBottom();
+  return d.querySelector('.ai-body');
+}
+function addErrBox(text){
+  const d=document.createElement('div'); d.className='row';
+  d.innerHTML='<div class="avatar" style="background:#fee2e2;box-shadow:none">⚠️</div><div class="err-box"></div>';
+  d.querySelector('.err-box').textContent=text;
+  wrap.appendChild(d); scrollBottom();
+}
+function chipHTML(emoji,label,done){
+  return '<span class="chip'+(done?' done':'')+'">'+emoji+' <span class="lbl">'+esc(label)+'</span>'+
+         (done?' ✓':'<span class="spin"></span>')+'</span>';
+}
+
+/* =============== 历史存取 =============== */
+function save(){ try{localStorage.setItem(LS_CHAT,JSON.stringify(history))}catch(e){} }
+function load(){
+  try{ history = JSON.parse(localStorage.getItem(LS_CHAT)||'[]'); }catch(e){ history=[]; }
+  history.forEach(m=>{
+    if(m.role==='user') addUser(m.content);
+    else{
+      const b = addAI();
+      b.innerHTML = md(m.content) +
+        (m.tools&&m.tools.length ? '<div class="tools">'+m.tools.map(t=>chipHTML(t.emoji||'⚙️',t.label||t.tool,true)).join('')+'</div>':'');
+    }
+  });
+  refreshEmpty();
+}
+
+/* =============== 发送与流式 =============== */
+async function send(text){
+  if(busy) return;
+  text = (text||input.value).trim();
+  if(!text) return;
+  input.value=''; input.style.height='auto';
+  history.push({role:'user',content:text}); save();
+  addUser(text); refreshEmpty();
+
+  busy=true; sendBtn.style.display='none'; stopBtn.style.display='';
+  ctrl=new AbortController();
+  const body = addAI();
+  let acc=''; const tools={};
+  const renderTools=()=>{
+    let box = body.querySelector('.tools');
+    const html = Object.values(tools).map(t=>chipHTML(t.emoji,t.label,t.status==='completed')).join('');
+    if(!box && html){ box=document.createElement('div'); box.className='tools'; body.appendChild(box); }
+    if(box) box.innerHTML = html;
+  };
+
+  try{
+    const res = await fetch('/t/chat/completions',{
+      method:'POST', signal:ctrl.signal,
+      headers:{'Content-Type':'application/json', ...basicHeader()},
+      body:JSON.stringify({
+        model:'hermes-agent', stream:true,
+        messages:[{role:'system',content:SYSTEM_PROMPT},
+                  ...history.slice(-MAX_SEND).map(m=>({role:m.role,content:m.content}))]
+      })
+    });
+    if(res.status===401){
+      localStorage.removeItem(AUTH_KEY);
+      throw new Error('登录已过期，即将回到登录页，请重新输入账号密码…');
+    }
+    if(!res.ok){ const t=await res.text().catch(()=>''); throw new Error('服务返回 '+res.status+'，请稍后重试 '+(t||'').slice(0,100)); }
+
+    const reader=res.body.getReader(), dec=new TextDecoder();
+    let buf='';
+    const handleBlock=(block)=>{
+      let ev='', dataStr='';
+      block.split('\n').forEach(l=>{
+        if(l.startsWith('event:')) ev=l.slice(6).trim();
+        else if(l.startsWith('data:')) dataStr+=l.slice(5).trim();
+      });
+      if(!dataStr || dataStr==='[DONE]') return;
+      let j; try{ j=JSON.parse(dataStr); }catch(e){ return; }
+      if(ev==='hermes.tool.progress' && j.toolCallId){
+        tools[j.toolCallId]={emoji:j.emoji||'⚙️', label:j.label||j.tool, status:j.status};
+        renderTools(); scrollBottom();
+      }else{
+        const delta=j.choices && j.choices[0] && j.choices[0].delta;
+        if(delta && delta.content){
+          acc+=delta.content;
+          const box=body.querySelector('.tools'); if(box) box.remove();
+          body.innerHTML = md(acc);
+          renderTools(); scrollBottom();
+        }
+      }
+    };
+    for(;;){
+      const {done,value}=await reader.read();
+      if(done) break;
+      buf += dec.decode(value,{stream:true});
+      let idx;
+      while((idx=buf.indexOf('\n\n'))>=0){ handleBlock(buf.slice(0,idx)); buf=buf.slice(idx+2); }
+    }
+    handleBlock(buf);
+
+    if(acc){
+      history.push({role:'assistant',content:acc,
+        tools:Object.values(tools).map(t=>({emoji:t.emoji,label:t.label}))});
+      save();
+    }else if(!Object.keys(tools).length){
+      body.innerHTML='<span style="color:var(--faint)">（AI 没有返回内容，请重试或换个说法）</span>';
+    }
+  }catch(e){
+    if(e.name==='AbortError'){
+      if(acc){ history.push({role:'assistant',content:acc+' （已手动停止）'}); save(); body.innerHTML=md(acc); }
+      else body.innerHTML='<span style="color:var(--faint)">（已停止）</span>';
+    }else{
+      addErrBox(e.message||'网络错误，请稍后重试');
+      if(/登录已过期/.test(e.message||'')) setTimeout(()=>location.reload(), 1600);
+    }
+  }finally{
+    busy=false; ctrl=null;
+    sendBtn.style.display=''; stopBtn.style.display='none';
+    refreshEmpty(); input.focus();
+  }
+}
+
+/* =============== 文件面板 =============== */
+const FICON = d => ({txt:'📄',md:'📝',doc:'📝',docx:'📝',pdf:'📕',xls:'📊',xlsx:'📊',csv:'📊',
+                     py:'🐍',js:'📜',html:'🌐',zip:'🗜️',gz:'🗜️',png:'🖼️',jpg:'🖼️',jpeg:'🖼️',
+                     mp4:'🎬',mp3:'🎵'}[d]||'📄');
+function fmtSize(n){ if(!n&&n!==0) return ''; if(n<1024)return n+' B';
+  if(n<1048576)return (n/1024).toFixed(1)+' KB'; return (n/1048576).toFixed(1)+' MB'; }
+
+async function openFiles(){
+  $('filesView').hidden=false; const list=$('filesList');
+  list.innerHTML='<div class="fempty">加载中…</div>';
+  try{
+    const r=await fetch('/files/',{headers:basicHeader(),cache:'no-store'});
+    if(r.status===401){ localStorage.removeItem(AUTH_KEY); location.reload(); return; }
+    const doc=new DOMParser().parseFromString(await r.text(),'text/html');
+    const items=[...doc.querySelectorAll('a')].filter(a=>!a.getAttribute('href').endsWith('../'));
+    if(!items.length){ list.innerHTML='<div class="fempty">还没有文件<br><br>让 AI 帮你做点什么，生成的文件会出现在这里</div>'; return; }
+    list.innerHTML='';
+    items.forEach(a=>{
+      const name=decodeURIComponent((a.getAttribute('href')||'').replace(/\/$/,''));
+      if(!name) return;
+      const row=document.createElement('div'); row.className='frow';
+      row.innerHTML='<div class="fico">'+FICON(name.split('.').pop().toLowerCase())+'</div>'+
+        '<div class="fmeta"><div class="fname"></div><div class="fsize"></div></div>'+
+        '<button class="dl-btn">⬇ 下载</button>';
+      row.querySelector('.fname').textContent=name;
+      row.querySelector('.fsize').textContent=fmtSize(null)||'点击下载';
+      row.querySelector('.dl-btn').onclick=()=>download(name, row.querySelector('.dl-btn'));
+      list.appendChild(row);
+    });
+  }catch(e){ list.innerHTML='<div class="fempty">加载失败：'+esc(e.message)+'</div>'; }
+}
+async function download(name, btn){
+  const old=btn.textContent; btn.textContent='准备中…'; btn.disabled=true;
+  try{
+    const r=await fetch('/files/'+encodeURIComponent(name),{headers:basicHeader()});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const blob=await r.blob();
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a'); a.href=url; a.download=name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),4000);
+    btn.textContent='✓ 已下载'; setTimeout(()=>{btn.textContent=old;btn.disabled=false;},1500);
+  }catch(e){ btn.textContent='失败'; alert('下载失败：'+e.message); btn.disabled=false; }
+}
+$('btnFiles').onclick=openFiles;
+$('filesClose').onclick=()=>{ $('filesView').hidden=true; };
+
+/* =============== 其它事件 =============== */
+function startApp(){ load(); input.focus(); }
+sendBtn.onclick=()=>send();
+stopBtn.onclick=()=>{ if(ctrl) ctrl.abort(); };
+input.addEventListener('keydown',e=>{
+  if(e.key==='Enter' && !e.shiftKey && !e.isComposing){ e.preventDefault(); send(); }
+});
+input.addEventListener('input',()=>{
+  input.style.height='auto';
+  input.style.height=Math.min(input.scrollHeight,160)+'px';
+});
+$('btnNew').onclick=()=>{
+  if(busy || !history.length) return;
+  if(confirm('确定开始新对话吗？当前对话记录将清除（仅清除你浏览器里的记录）。')){
+    history=[]; save(); wrap.innerHTML=''; refreshEmpty();
+  }
+};
+$('btnOut').onclick=()=>{
+  if(confirm('确定退出登录吗？')){ localStorage.removeItem(AUTH_KEY); location.reload(); }
+};
+document.querySelectorAll('.sugg button').forEach(b=>{ b.onclick=()=>send(b.dataset.q); });
+
+boot();
+</script>
+</body>
+</html>
