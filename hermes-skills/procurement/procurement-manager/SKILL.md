@@ -44,16 +44,24 @@ metadata:
 
 ### A3 出雙報告（規格見下），交付後問：「要不要我再深挖某一家工廠／某一款？」
 
-## 最終輸出：雙報告（HTML＋PPT）
+## 最終輸出：雙報告（HTML＋PPT）——用生成器出，不要手寫代碼
 
-### ① HTML 預覽報告（先發，對話裡直接能看）
-按 SOUL.md 工件規則交付：`:::artifact{identifier="sourcing-report-YYYYMMDD" type="text/html" title="選品調研報告·<品類>"}`（四反引號圍欄、自包含 inline CSS、不引外部資源；深青＋火焰橙配色，繁體）。
-結構隨內容走，大致順序：頭部（品類＋調研時間窗＋一句話結論）→ 數據說明（能力邊界聲明）→ 趨勢判斷（含可信度標注）→ 突破創新點 → 代表爆款 → 源頭廠商候選（2–4 家卡片：資質＋風險＋來源）→ 價格帶 → 認證清單 → 風險 → 建議行動。
+把調研結果整理成一份 JSON（schema 見 `examples/電飯鍋-報告示範.json`，照著填），然後執行：
 
-### ② 詳細 PPT（後發，供選品會投影）
-python-pptx 生成，文件名 `選品調研報告-<品類>-YYYYMMDD.pptx`，`MEDIA:` 標籤交付。
-**結構隨機應變，不固定頁數（6–10 頁）**：查到什麼講什麼——每個有料的維度至少一頁（趨勢／創新／爆款／廠商／價格帶／認證／風險），查不到的維度併入「數據說明」如實交代，不硬湊頁。固定要求的只有：第 1 頁封面（品類＋時間窗＋一句話結論，深色底）、最後 1 頁結論與行動（建議＋理由＋下一步：誰、做什麼、何時）；中間頁按調研收穫自由組織。
-樣式：微軟正黑體，深青主色＋火焰橙點綴，原生表格，標題≥28pt／正文≥14pt，滿版不溢出。
+```bash
+python3 /home/admin/.hermes/skills/procurement/procurement-manager/scripts/make_report.py \
+  --json <調研數據.json> --outdir /srv/hermes-share/採購報告 --prefix 選品調研報告
+```
+
+一次生成兩個文件（文件名 `選品調研報告-<品類>.html` / `.pptx`）：
+- **HTML 預覽報告**（先發）：按 SOUL.md 工件規則用 `:::artifact{identifier="sourcing-report-YYYYMMDD" type="text/html" title="選品調研報告·<品類>"}` 四反引號圍欄讀入文件內容交付預覽，並 `MEDIA:` 給下載鏈接
+- **PPT 匯報文件**（後發）：`MEDIA:` 標籤交付下載鏈接，供選品會投影
+
+**JSON 要點**（生成器自動排版，缺的 section 直接不填就會跳過——結構隨機應變）：
+- 頂層：`category`（品類）、`window`（時間窗）、`date`、`data_note`（能力邊界聲明，必填）、`metrics[]`（關鍵數字卡：label/value/note）、`conclusion{verdict:打樣|試單|放棄, reasons[]}`、`actions[]`（誰+做什麼+何時）
+- `sections[]` 四型：`points`（創新點/風險點：head+text）、`checklist`（初篩五問：text+pass+note）、`table`（廠商候選/比價：headers+rows+colw+note）、`text`（段落）
+- 鐵律照舊：查得到→數字＋來源（✅）；估算→⚠️；查不到→❓寫進 data_note，**嚴禁編造**
+- 真實 1688 數據暫未接入（店雷達端點暫不可達）；當前趨勢／廠商／價格信息以聯網搜索公開來源為準，來源連結寫進 sections
 
 ## 模式 B · 逐步提問（用戶沒頭緒時）
 一題一題來，每題給 A/B/C 選項、報進度（n/7），答完即時回饋：
