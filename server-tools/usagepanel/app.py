@@ -81,9 +81,10 @@ function fmt(n){return (n||0).toLocaleString()}
 function fmtTok(n){if(!n)return '0';if(n>=10000)return (n/10000).toFixed(1)+' 万';return fmt(n)}
 function fmtT(s){return s?String(s).replace('T',' ').slice(0,16):'—'}
 async function load(){
-  const r = await fetch('/api/stats');
+try{
+  const r = await fetch('api/stats');
   if(r.status===401){login();return}
-  const d = (await r.json());
+  const d = await r.json();
   const agg = {}; d.agg.forEach(a=>agg[a._id]=a);
   document.getElementById('cards').innerHTML =
     `<div class="card"><b>${d.users.length}</b><small>注册用户</small></div>`+
@@ -102,9 +103,13 @@ async function load(){
   }).join('');
   document.getElementById('rows').innerHTML = rows || '<tr><td colspan="9">还没有用户</td></tr>';
   document.getElementById('app').style.display='block';
+}catch(e){
+  document.getElementById('app').style.display='block';
+  document.getElementById('cards').innerHTML='<div class="card"><b>!</b><small>加载失败：'+e+'</small></div>';
+}
 }
 async function doLogin(){
-  const r = await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},
+  const r = await fetch('api/login',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({password:document.getElementById('pw').value})});
   if(r.ok){load()}else{document.getElementById('err').textContent='密码不对'}
 }
