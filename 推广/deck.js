@@ -208,18 +208,19 @@ band(s, "工廠的每條回覆記進評估卡背面——談判時有據可依�
 s = p.addSlide();
 header(s, "配合 Luma AI", "髒活交給 Luma，你只做判斷");
 const ai = [
+  ["「我想找新品」", "採購經理提問模式", "不知道從哪開始？它一題一題問你，帶你走完整個選品流程"],
   ["「評估這個新品」（截圖拖進對話）", "選品評估卡初稿", "賣點、售價區間、認證清單、風險、要問工廠的問題，一次列全"],
   ["「查一下這家工廠的底細」", "工廠背調卡", "工廠還是貿易商＋風險記錄＋針對性驗廠提問清單"],
   ["「這幾份報價幫我對比」（拖文件）", "統一對比表", "單價／貨期／條款橫向對齊，最低價高亮，幣種自動折算"],
   ["「1,000 美元換港幣是多少」", "匯率速算", "當日中間價，帶來源；整張價格表也能批量換"],
 ];
 ai.forEach((a, i) => {
-  const y = 1.6 + i * 1.18;
-  s.addShape("roundRect", { x: M, y, w: 5.1, h: 0.95, fill: { color: TINT }, rectRadius: 0.08 });
-  s.addText(a[0], { x: M + 0.2, y, w: 4.75, h: 0.95, fontSize: 12.5, bold: true, color: PRIMARY_D, fontFace: F, valign: "middle", margin: 0 });
-  s.addText("→", { x: 5.72, y, w: 0.5, h: 0.95, fontSize: 20, bold: true, color: ACCENT, fontFace: F, valign: "middle", align: "center", margin: 0 });
-  s.addText(a[1], { x: 6.35, y: y + 0.06, w: 6.4, h: 0.4, fontSize: 14.5, bold: true, color: TEXT, fontFace: F, margin: 0 });
-  s.addText(a[2], { x: 6.35, y: y + 0.47, w: 6.4, h: 0.45, fontSize: 11.5, color: MUTED, fontFace: F, margin: 0 });
+  const y = 1.5 + i * 0.98;
+  s.addShape("roundRect", { x: M, y, w: 5.1, h: 0.85, fill: { color: TINT }, rectRadius: 0.08 });
+  s.addText(a[0], { x: M + 0.2, y, w: 4.75, h: 0.85, fontSize: 12, bold: true, color: PRIMARY_D, fontFace: F, valign: "middle", margin: 0 });
+  s.addText("→", { x: 5.72, y, w: 0.5, h: 0.85, fontSize: 18, bold: true, color: ACCENT, fontFace: F, valign: "middle", align: "center", margin: 0 });
+  s.addText(a[1], { x: 6.35, y: y + 0.04, w: 6.4, h: 0.36, fontSize: 14, bold: true, color: TEXT, fontFace: F, margin: 0 });
+  s.addText(a[2], { x: 6.35, y: y + 0.42, w: 6.4, h: 0.4, fontSize: 11, color: MUTED, fontFace: F, margin: 0 });
 });
 band(s, "網頁 47.243.79.144 或飛書喊它；輸出的是可下載文件，直接歸檔進這本冊子對應的頁。", 6.5);
 
