@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """用量统计面板后端：读 LibreChat mongo，展示注册用户/消息数/token 消耗/趋势/最近提问。管理员专用。"""
-import hashlib, hmac, json, subprocess
+import hashlib, hmac, json, re, subprocess
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from urllib.parse import urlparse, parse_qs
 
 PORT = 8766
 BASE = Path('/opt/usagepanel')
@@ -57,6 +58,28 @@ def mongo_stats():
     return json.loads(line)
 
 
+MONGO_JS_USER = """
+const u = db.users.findOne({_id: ObjectId('%s')}, {name:1,email:1,role:1,createdAt:1});
+const qs = db.messages.find({user:'%s', isCreatedByUser:true},
+  {createdAt:1,text:1,attachments:1}).sort({createdAt:-1}).limit(30).toArray();
+const s = db.messages.aggregate([
+  {$match:{user:'%s'}},
+  {$group:{_id:null, msgs:{$sum:1}, tokens:{$sum:{$ifNull:["$tokenCount",0]}},
+    convs:{$addToSet:"$conversationId"}, first:{$min:"$createdAt"}, last:{$max:"$createdAt"}}},
+  {$project:{msgs:1,tokens:1,convs:{$size:"$convs"},first:1,last:1}}
+]).toArray();
+JSON.stringify({user:u, questions:qs, summary:s[0]||null});
+"""
+
+
+def mongo_user(uid):
+    out = subprocess.run(
+        ['docker', 'exec', 'librechat-mongo', 'mongosh', '--quiet', 'LibreChat', '--eval', MONGO_JS_USER % (uid, uid, uid)],
+        capture_output=True, text=True, timeout=20).stdout
+    line = [l for l in out.splitlines() if l.strip().startswith('{')][-1]
+    return json.loads(line)
+
+
 def _token_ok(cookie_val):
     want = hmac.new(_secret, b'usage-admin', hashlib.sha256).hexdigest()
     return isinstance(cookie_val, str) and hmac.compare_digest(cookie_val, want)
@@ -94,6 +117,16 @@ table{width:100%;border-collapse:collapse;background:#fff;border-radius:10px;ove
 th,td{padding:9px 11px;text-align:left;font-size:12.5px;border-bottom:1px solid #eef1f5;white-space:nowrap}
 th{background:#f8fafc;color:#55657a;font-weight:600}td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 tr:hover td{background:#f6faff}.role-ADMIN{color:#b45309;font-weight:600}
+.uname{cursor:pointer;color:#1a2332;border-bottom:1px dashed #b9c6d8}
+.uname:hover{color:#0f6bff;border-color:#0f6bff}
+#ov{position:fixed;inset:0;background:rgba(15,30,55,.45);z-index:50;display:flex;align-items:center;justify-content:center}
+#modal{background:#fff;border-radius:14px;max-width:640px;width:92%;max-height:84vh;overflow:auto;padding:22px 26px;box-shadow:0 10px 40px rgba(0,0,0,.25)}
+#modal h2{font-size:19px;margin-bottom:2px}#modal .mem{color:#8a97a8;font-size:12.5px;margin-bottom:12px}
+.mstats{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.mstats div{background:#f4f7fb;border-radius:8px;padding:7px 13px;font-size:12px;color:#55657a}
+.mstats b{display:block;font-size:16px;color:#1a2332}
+.mclose{float:right;background:#eef1f6;color:#55657a;padding:4px 12px;font-size:12px}
+#modal h4{font-size:13px;color:#3a4a5e;margin:14px 0 6px}
 .note{color:#8a97a8;font-size:12px;margin-top:10px;line-height:1.7}
 #login{max-width:320px;margin:120px auto;background:#fff;padding:28px;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,.1);text-align:center}
 #login input{width:100%;padding:10px;margin:14px 0;border:1px solid #d7dee8;border-radius:8px;font-size:15px}
@@ -110,11 +143,16 @@ tr:hover td{background:#f6faff}.role-ADMIN{color:#b45309;font-weight:600}
 <table><thead><tr><th>用户</th><th>角色</th><th>注册</th><th class="num">会话</th><th class="num">提问</th>
 <th class="num">消息总数</th><th class="num">Token 总数</th><th class="num">7天消息</th><th class="num">7天 Token</th>
 <th>7天环比</th><th>最后活跃</th></tr></thead><tbody id="rows"></tbody></table>
-<div class="cols">
 <div class="panel"><h3>使用通道</h3><div class="chips" id="chips"></div></div>
-<div class="panel"><h3>最近提问</h3><ul class="qlist" id="qlist"></ul></div>
+<p class="note">点击用户名可查看该同事的提问档案。Token 来自 LibreChat 记账（含上下文，仅网页端）；飞书/微信消息不计入。环比 = 近 7 天 vs 再前 7 天。仅管理员可见。</p>
 </div>
-<p class="note">Token 来自 LibreChat 记账（含上下文，仅网页端）；飞书/微信消息不计入。环比 = 近 7 天 vs 再前 7 天。仅管理员可见。</p>
+<div id="ov" style="display:none" onclick="if(event.target===this)closeProfile()">
+<div id="modal">
+<button class="mclose" onclick="closeProfile()">关闭</button>
+<h2 id="m-name"></h2><div class="mem" id="m-meta"></div>
+<div class="mstats" id="m-stats"></div>
+<h4>提问记录（最近 30 条）</h4><ul class="qlist" id="m-qs"></ul>
+</div>
 </div>
 <script>
 const WD=['日','一','二','三','四','五','六'];
@@ -131,7 +169,6 @@ try{
   const d = await r.json();
   const agg={};d.agg.forEach(a=>agg[a._id]=a);
   const prev={};d.prev.forEach(a=>prev[a._id]=a);
-  const name={};d.users.forEach(u=>name[u._id]=u.name||u.email);
 
   document.getElementById('cards').innerHTML =
     `<div class="card"><b>${d.users.length}</b><small>注册用户</small></div>`+
@@ -155,7 +192,7 @@ try{
 
   const rows=d.users.slice().sort((a,b)=>String(agg[b._id]?.last||'').localeCompare(String(agg[a._id]?.last||''))).map(u=>{
     const a=agg[u._id]||{},p=prev[u._id]||{msgs:0};
-    return `<tr><td><b>${u.name||'—'}</b><div style="color:#8a97a8;font-size:11px">${u.email}</div></td>`+
+    return `<tr><td><a class="uname" onclick="openProfile('${u._id}')"><b>${u.name||'—'}</b></a><div style="color:#8a97a8;font-size:11px">${u.email}</div></td>`+
       `<td class="role-${u.role||'USER'}">${u.role||'USER'}</td>`+
       `<td>${fmtT(u.createdAt).slice(0,10)}</td>`+
       `<td class="num">${fmt(a.convs)}</td><td class="num">${fmt(a.q)}</td>`+
@@ -170,13 +207,6 @@ try{
   document.getElementById('chips').innerHTML=d.eps.map(e=>
     `<span>${em[e._id]||e._id} · ${fmt(e.msgs)} 条 / ${fmtTok(e.tok)} tk</span>`).join('')||'<span>暂无</span>';
 
-  document.getElementById('qlist').innerHTML=d.recent.map(m=>{
-    const t=(m.text||'').replace(/\\s+/g,' ').trim()||
-      (m.attachments&&m.attachments.length?'[发送了附件/图片]':'[空]');
-    return `<li><span class="qt">${fmtT(m.createdAt).slice(5,16)}</span>`+
-      `<span class="qn">${name[m.user]||'?'}</span>${t.length>60?t.slice(0,60)+'…':t}</li>`;
-  }).join('')||'<li>暂无提问</li>';
-
   document.getElementById('upd').textContent='更新于 '+new Date().toLocaleTimeString('zh-CN',{hour12:false});
   document.getElementById('app').style.display='block';
 }catch(e){
@@ -184,6 +214,29 @@ try{
   document.getElementById('cards').innerHTML='<div class="card"><b>!</b><small>加载失败：'+e+'</small></div>';
 }
 }
+async function openProfile(uid){
+try{
+  const r = await fetch('api/user?uid='+uid);
+  if(!r.ok)throw('加载失败 '+r.status);
+  const d = await r.json();
+  const u=d.user||{}, s=d.summary||{};
+  document.getElementById('m-name').textContent=u.name||'(未命名)';
+  document.getElementById('m-meta').textContent=(u.email||'')+' · '+(u.role||'USER')+' · 注册于 '+fmtT(u.createdAt).slice(0,10);
+  document.getElementById('m-stats').innerHTML=
+    `<div><b>${fmt(s.convs)}</b>会话</div><div><b>${fmt(s.msgs)}</b>消息</div>`+
+    `<div><b>${fmtTok(s.tokens)}</b>Token</div>`+
+    `<div><b>${fmtT(s.first).slice(0,10)}</b>首次使用</div>`+
+    `<div><b>${fmtT(s.last).slice(0,16)}</b>最后活跃</div>`;
+  document.getElementById('m-qs').innerHTML=(d.questions||[]).map(m=>{
+    const t=(m.text||'').replace(/\\s+/g,' ').trim()||
+      (m.attachments&&m.attachments.length?'[发送了附件/图片]':'[空]');
+    return `<li><span class="qt">${fmtT(m.createdAt)}</span>${t.length>80?t.slice(0,80)+'…':t}</li>`;
+  }).join('')||'<li>还没有提问记录</li>';
+  document.getElementById('ov').style.display='flex';
+}catch(e){alert('打开档案失败：'+e)}
+}
+function closeProfile(){document.getElementById('ov').style.display='none'}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeProfile()});
 async function doLogin(){
   const r = await fetch('api/login',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({password:document.getElementById('pw').value})});
@@ -209,14 +262,28 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(raw)
 
+    def _authed(self):
+        cookie = (self.headers.get('Cookie') or '')
+        val = dict(p.strip().split('=', 1) for p in cookie.split(';') if '=' in p).get('usage_auth')
+        return _token_ok(val)
+
     def do_GET(self):
-        if self.path == '/api/stats':
-            cookie = (self.headers.get('Cookie') or '')
-            val = dict(p.strip().split('=', 1) for p in cookie.split(';') if '=' in p).get('usage_auth')
-            if not _token_ok(val):
+        u = urlparse(self.path)
+        if u.path == '/api/stats':
+            if not self._authed():
                 return self._send(401, '{"error":"unauthorized"}', 'application/json')
             try:
                 return self._send(200, json.dumps(mongo_stats()), 'application/json')
+            except Exception as e:
+                return self._send(500, json.dumps({'error': str(e)}), 'application/json')
+        if u.path == '/api/user':
+            if not self._authed():
+                return self._send(401, '{"error":"unauthorized"}', 'application/json')
+            uid = (parse_qs(u.query).get('uid') or [''])[0]
+            if not re.fullmatch(r'[0-9a-f]{24}', uid):
+                return self._send(400, '{"error":"bad uid"}', 'application/json')
+            try:
+                return self._send(200, json.dumps(mongo_user(uid)), 'application/json')
             except Exception as e:
                 return self._send(500, json.dumps({'error': str(e)}), 'application/json')
         return self._send(200, PAGE)
