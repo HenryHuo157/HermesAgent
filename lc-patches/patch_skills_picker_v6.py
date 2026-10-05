@@ -4,7 +4,7 @@ Replaces the old v1-v5 chain; safe on a brand-new container."""
 import subprocess, sys
 
 INDEX = '/app/client/dist/index.html'
-MARK = 'skills-picker-v6'
+MARK = 'skills-picker-v6b'
 
 BLOCK = r"""<style>
 /* PATCH-MARK: skills-picker-v6 — 技能选择器 + 白色卡片 */
@@ -100,26 +100,32 @@ button[data-artifact-trigger]::after{
   function ensureButton(){
     var ta=document.getElementById('prompt-textarea');
     if(!ta) return;
-    var root=composerRoot(ta);
-    /* fix: 上传图片时附件缩略图改变按钮顺序导致技能按钮插错位——有附件时摘掉，清空后自动回来 */
-    var hasImg=root?root.querySelector('img'):null;
-    if(hasImg){
-      var staleAll=document.querySelectorAll('#lc-skillbtn');
-      for(var d=0;d<staleAll.length;d++){ staleAll[d].remove(); }
+    /* v6b: 錨點改為發送按鈕（永遠在底部操作行，附件預覽不會影響它），
+       徹底解決上傳/粘貼圖片時技能按鈕被插進附件預覽區變成幽靈圓形芯片的問題 */
+    var scope=ta.closest('form')||composerRoot(ta)||document;
+    var stale=document.querySelectorAll('#lc-skillbtn');
+    var b=document.getElementById('lc-skillbtn');
+    if(!b){
+      b=document.createElement('button');
+      b.type='button'; b.id='lc-skillbtn'; b.innerHTML='🧩 技能';
+      b.addEventListener('click',function(e){ e.stopPropagation(); toggle(ta); });
+    }
+    var send=scope.querySelector('[data-testid="send-button"]')||scope.querySelector('button[type="submit"]');
+    if(send && send.parentElement){
+      for(var i=0;i<stale.length;i++){ if(stale[i]!==b) stale[i].remove(); }
+      if(send.previousElementSibling!==b){ send.parentElement.insertBefore(b, send); }
       return;
     }
-    var btns=root?root.querySelectorAll('button'):[];
-    var stale=document.querySelectorAll('#lc-skillbtn');
-    var mine=null;
-    for(var s=0;s<btns.length;s++){ if(btns[s].id==='lc-skillbtn') mine=btns[s]; }
-    for(var d=0;d<stale.length;d++){ if(stale[d]!==mine) stale[d].remove(); }
-    var anchor=btns[1]||btns[0];   /* ⚙️ 设置键右侧 */
-    if(mine && mine.parentElement===anchor.parentElement && anchor.nextElementSibling===mine) return;
-    if(mine) mine.remove();
+    /* 兜底：找不到發送鍵時用舊錨點，但僅限無附件狀態 */
+    var hasImg=scope.querySelector('img');
+    if(hasImg){
+      for(var j=0;j<stale.length;j++){ stale[j].remove(); }
+      return;
+    }
+    var btns=scope.querySelectorAll('button');
     if(!btns.length) return;
-    var b=document.createElement('button');
-    b.type='button'; b.id='lc-skillbtn'; b.innerHTML='🧩 技能';
-    b.addEventListener('click',function(e){ e.stopPropagation(); toggle(ta); });
+    var anchor=btns[1]||btns[0];   /* ⚙️ 设置键右侧 */
+    if(b.parentElement===anchor.parentElement && anchor.nextElementSibling===b) return;
     anchor.parentElement.insertBefore(b, anchor.nextSibling);
   }
   function toggle(ta){
@@ -230,8 +236,12 @@ if r.returncode != 0:
     sys.exit('cannot read index.html: ' + r.stderr)
 html = r.stdout
 
+# 先移除任何舊版 v6 注入塊（更新代碼時必須替換而非跳過）
+import re as _re
+html = _re.sub(r'<style>\s*/\* PATCH-MARK: skills-picker-v6.*?</script>\n?', '', html, flags=_re.S)
+
 if MARK in html:
-    print('[v6 already present]')
+    print('[v6b already present]')
     sys.exit(0)
 assert '</head>' in html
 html = html.replace('</head>', BLOCK + '\n</head>', 1)
