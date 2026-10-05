@@ -4,10 +4,13 @@ Replaces the old v1-v5 chain; safe on a brand-new container."""
 import subprocess, sys
 
 INDEX = '/app/client/dist/index.html'
-MARK = 'skills-picker-v6b'
+MARK = 'skills-picker-v6c'
 
 BLOCK = r"""<style>
-/* PATCH-MARK: skills-picker-v6 — 技能选择器 + 白色卡片 */
+/* PATCH-MARK: skills-picker-v6c — 技能选择器 + 白色卡片 */
+#lc-skillbtn{background:transparent !important;border:none !important;box-shadow:none !important;padding:0;width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;color:inherit;opacity:.72;}
+#lc-skillbtn:hover{opacity:1;color:#E8590C;}
+#lc-skillbtn svg{width:20px;height:20px;display:block;}
 #lc-skillpick{
   position:fixed;z-index:99999;display:none;
   background:#fff;border:1px solid #d5d9e0;border-radius:12px;
@@ -107,7 +110,8 @@ button[data-artifact-trigger]::after{
     var b=document.getElementById('lc-skillbtn');
     if(!b){
       b=document.createElement('button');
-      b.type='button'; b.id='lc-skillbtn'; b.innerHTML='🧩 技能';
+      b.type='button'; b.id='lc-skillbtn';
+      b.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19.439 7.85c-.049.322.059.648.289.878l1.568 1.568c.47.47.706 1.087.706 1.704s-.235 1.233-.706 1.704l-1.611 1.611a.98.98 0 0 1-.837.276c-.47-.07-.802-.48-.968-.925a2.501 2.501 0 1 0-3.214 3.214c.446.166.855.497.925.968a.979.979 0 0 1-.276.837l-1.61 1.61a2.404 2.404 0 0 1-1.705.707 2.402 2.402 0 0 1-1.704-.706l-1.568-1.568a1.026 1.026 0 0 0-.877-.29c-.493.074-.84.504-1.02.968a2.5 2.5 0 1 1-3.237-3.237c.464-.18.894-.527.967-1.02a1.026 1.026 0 0 0-.289-.877l-1.568-1.568A2.402 2.402 0 0 1 1.998 12c0-.617.236-1.234.706-1.704L4.23 8.77c.24-.24.581-.353.917-.303.515.077.877.528 1.073 1.01a2.5 2.5 0 1 0 3.259-3.259c-.482-.196-.933-.558-1.012-1.073-.05-.336.062-.676.303-.917l1.525-1.525A2.402 2.402 0 0 1 12 1.998c.617 0 1.234.236 1.704.706l1.568 1.568c.23.23.556.338.877.29.493-.074.84-.504 1.02-.968a2.5 2.5 0 1 1 3.237 3.237c-.464.18-.894.527-.967 1.02Z"/></svg>';
       b.addEventListener('click',function(e){ e.stopPropagation(); toggle(ta); });
     }
     var send=scope.querySelector('[data-testid="send-button"]')||scope.querySelector('button[type="submit"]');
