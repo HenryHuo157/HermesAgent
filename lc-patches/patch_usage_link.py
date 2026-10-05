@@ -3,7 +3,7 @@
 import re, subprocess, sys
 
 INDEX = '/app/client/dist/index.html'
-MARK = 'usage-link-2026c'
+MARK = 'usage-link-2026d'
 
 BLOCK = r"""<style>
 /* PATCH-MARK: usage-link-2026c — 左欄工具欄原生用量圖標 */
@@ -18,7 +18,12 @@ BLOCK = r"""<style>
 (function(){
   var b=document.getElementById('lc-usagebtn');
   if(!b) return;
-  b.addEventListener('click',function(){ window.open('/usage/','_blank'); });
+  b.addEventListener('click',function(){
+    /* /usage/ 會被 LibreChat 的 Service Worker 劫持回 SPA 殼→404；
+       /usage/index.html 是文件型請求，SW 放行，nginx 直接出面板 */
+    var w=window.open('/usage/index.html','_blank');
+    if(!w){ window.location.href='/usage/index.html'; }
+  });
   function place(){
     var icons=document.querySelectorAll('nav a, nav button');
     var last=null, lastB=0;
