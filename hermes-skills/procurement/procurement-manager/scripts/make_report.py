@@ -358,7 +358,9 @@ if __name__ == "__main__":
     a = ap.parse_args()
     data = sanitize(json.load(open(a.json, encoding="utf-8")))
     os.makedirs(a.outdir, exist_ok=True)
-    stem = f'{a.prefix}-{data.get("category","報告")}'
+    import re as _re
+    cat = _re.sub(r"\s+", "", data.get("category", "報告"))  # 文件名去空格——URL 鏈接斷裂之源
+    stem = f'{a.prefix}-{cat}'
     html_path = os.path.join(a.outdir, stem + ".html")
     pptx_path = os.path.join(a.outdir, stem + ".pptx")
     build_html(data, html_path)
