@@ -5,7 +5,7 @@ description: 中國市場產品選品調研全流程：搜索京東/天貓/淘�
 
 # China Product Research（中國市場產品調研 → HTML 報告 + PPT）
 
-> ## 🤖 Luma 宿主適配（Hermes 服務器，2026-10-02）
+> ## 🤖 畢卡索 宿主適配（Hermes 服務器，2026-10-02）
 > - **技能根目錄**：`/home/admin/.hermes/skills/research/china-product-research/`；輸出工作目錄
 >   `/srv/hermes-share/市場調研/{產品slug}-research/`（report.html、deck.pptx、build_ppt.js 留檔）
 > - **搜索/抓頁**：用 Hermes 自帶聯網搜索；網頁正文用 curl 或 python 取（本宿主無 WebFetch 工具名）。
@@ -14,7 +14,7 @@ description: 中國市場產品選品調研全流程：搜索京東/天貓/淘�
 > - **渲染**：soffice 已在 PATH，pymupdf 已裝（admin 系統 python3）——`scripts/render_deck.py` 直接可用
 > - **視覺驗收**：本宿主無 visual-judge 子代理——渲染成功後把首頁 PNG 以 `MEDIA:` 交給用戶目檢，
 >   並如實聲明「未經 AI 目檢，發現問題說頁碼即修」；不要假裝檢查過
-> - **交付語法**：`::zcode-file-citation` 是 ZCode 宿主專用——Luma 改用 SOUL.md 的
+> - **交付語法**：`::zcode-file-citation` 是 ZCode 宿主專用——畢卡索 改用 SOUL.md 的
 >   `:::artifact`（HTML 預覽）＋ `MEDIA:` 標籤（所有文件下載鏈接）；HTML 同時讀檔內容入 artifact
 > - 語言跟隨：默認繁體，用戶用簡體提問則全報告轉簡體（字體改微软雅黑）
 > - 其餘全部照舊（輸入規範／七查詢／六表／誠信規則／10 頁版式／陷阱清單／保留 build_ppt.js）

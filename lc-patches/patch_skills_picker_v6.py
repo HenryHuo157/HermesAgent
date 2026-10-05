@@ -101,6 +101,13 @@ button[data-artifact-trigger]::after{
     var ta=document.getElementById('prompt-textarea');
     if(!ta) return;
     var root=composerRoot(ta);
+    /* fix: 上传图片时附件缩略图改变按钮顺序导致技能按钮插错位——有附件时摘掉，清空后自动回来 */
+    var hasImg=root?root.querySelector('img'):null;
+    if(hasImg){
+      var staleAll=document.querySelectorAll('#lc-skillbtn');
+      for(var d=0;d<staleAll.length;d++){ staleAll[d].remove(); }
+      return;
+    }
     var btns=root?root.querySelectorAll('button'):[];
     var stale=document.querySelectorAll('#lc-skillbtn');
     var mine=null;

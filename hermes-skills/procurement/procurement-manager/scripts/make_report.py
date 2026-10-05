@@ -345,7 +345,7 @@ ul.act{list-style:none}.act li{padding:6px 0;color:#64748b;font-size:14px}
     parts.append('<div class="panel"><h3>結論與下一步行動</h3>'
                  + "".join(f'<p class="para">· {esc(rz)}</p>' for rz in reasons)
                  + '<ul class="act">' + "".join(f'<li>{i+1}. {esc(a)}</li>' for i, a in enumerate(acts)) + '</ul></div>')
-    parts.append(f'<div class="foot">Luma · 敏寶團隊 AI 生成　|　{esc(data.get("date",""))}　|　本報告由 AI 整理，重大決策請以人工核實為準</div></div></body></html>')
+    parts.append(f'<div class="foot">畢卡索 · 敏寶團隊 AI 生成　|　{esc(data.get("date",""))}　|　本報告由 AI 整理，重大決策請以人工核實為準</div></div></body></html>')
     out = "\n".join(parts).replace("%VC%", vcolor)
     open(path, "w", encoding="utf-8").write(out)
 

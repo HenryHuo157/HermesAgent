@@ -87,7 +87,7 @@ def _token_ok(cookie_val):
 
 PAGE = """<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Luma 用量统计</title><style>
+<title>畢卡索 用量统计</title><style>
 *{box-sizing:border-box;margin:0}body{font-family:system-ui,'Microsoft YaHei';background:#f4f6f9;color:#1a2332}
 .wrap{max-width:1150px;margin:28px auto;padding:0 16px}
 h1{font-size:22px;margin-bottom:2px}h1 span{color:#6b7a90;font-size:13px;font-weight:400;margin-left:8px}
@@ -132,11 +132,11 @@ tr:hover td{background:#f6faff}.role-ADMIN{color:#b45309;font-weight:600}
 #login input{width:100%;padding:10px;margin:14px 0;border:1px solid #d7dee8;border-radius:8px;font-size:15px}
 #err{color:#c0392b;font-size:13px;min-height:18px}
 </style></head><body>
-<div id="login" style="display:none"><h1>Luma 用量统计</h1>
+<div id="login" style="display:none"><h1>畢卡索 用量统计</h1>
 <input id="pw" type="password" placeholder="管理密码" onkeydown="if(event.key=='Enter')doLogin()"><br>
 <div id="err"></div><button onclick="doLogin()">进入</button></div>
 <div class="wrap" id="app" style="display:none">
-<div class="topbar"><h1>Luma 用量统计<span>团队 AI 管理面板 · 每 60 秒自动刷新</span></h1>
+<div class="topbar"><h1>畢卡索 用量统计<span>团队 AI 管理面板 · 每 60 秒自动刷新</span></h1>
 <div><span class="upd" id="upd"></span> <button onclick="load()">刷新</button></div></div>
 <div class="cards" id="cards"></div>
 <div class="panel"><h3>近 14 天每日消息</h3><div class="chart" id="chart"></div></div>

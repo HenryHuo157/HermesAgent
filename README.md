@@ -1,6 +1,6 @@
-# Luma · 敏寶團隊 AI（Hermes Agent 部署工程）
+# 畢卡索 · 敏寶團隊 AI（Hermes Agent 部署工程）
 
-Mainplan（敏寶）的團隊 AI 助手 **Luma** 的完整部署工程：基於 Hermes Agent（雲端沙盒 Agent）+ LibreChat（網頁前端）+ 飛書/微信渠道，AI 大腦為 GLM-5.3-Flash（Z.ai 編程套餐端點）。
+Mainplan（敏寶）的團隊 AI 助手 **畢卡索（Picasso）** 的完整部署工程：基於 Hermes Agent（雲端沙盒 Agent）+ LibreChat（網頁前端）+ 飛書/微信渠道，AI 大腦為 GLM-5.3-Flash（Z.ai 編程套餐端點）。
 
 ## 架構一覽
 

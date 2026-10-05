@@ -1,9 +1,9 @@
-// 《1688 選品篩選工作冊》— 採購部實戰工具冊（配合 Luma AI）
+// 《1688 選品篩選工作冊》— 採購部實戰工具冊（配合畢卡索 AI）
 const pptxgen = require("pptxgenjs");
 
 const p = new pptxgen();
 p.layout = "LAYOUT_WIDE";           // 13.33 × 7.5"
-p.author = "Luma · Mainplan";
+p.author = "Picasso · Mainplan";
 p.title = "1688 選品篩選工作冊";
 
 // ---- 調色板：鑄鐵黑 / 深青 / 火焰橙（廚具火候感）----
@@ -40,7 +40,7 @@ s.addText("MAINPLAN 敏寶 · 採購部實戰手冊", { x: 0.9, y: 2.0, w: 9, h:
 s.addText("1688 選品篩選工作冊", { x: 0.9, y: 2.45, w: 9.6, h: 1.15, fontSize: 52, bold: true, color: "FFFFFF", fontFace: F, margin: 0 });
 s.addText("邊逛邊對照：初篩 · 評估 · 背調 · 詢價，一冊搞掂", { x: 0.9, y: 3.75, w: 9, h: 0.5, fontSize: 17, color: "B9C6D6", fontFace: F, margin: 0 });
 s.addShape("line", { x: 0.9, y: 4.55, w: 2.2, h: 0, line: { color: ACCENT, width: 3 } });
-s.addText("配合 Luma AI 使用 · 2026 年 10 月版", { x: 0.9, y: 4.75, w: 9, h: 0.4, fontSize: 12.5, color: "8A97A8", fontFace: F, margin: 0 });
+s.addText("配合畢卡索 AI 使用 · 2026 年 10 月版", { x: 0.9, y: 4.75, w: 9, h: 0.4, fontSize: 12.5, color: "8A97A8", fontFace: F, margin: 0 });
 
 // ============ S2 六步流程 ============
 s = p.addSlide();
@@ -67,7 +67,7 @@ steps.forEach((st, i) => {
     s.addText("→", { x: x + cw - 0.02, y: y0 + 1.4, w: gap + 0.06, h: 0.5, fontSize: 15, bold: true, color: FAINT, fontFace: F, align: "center", valign: "middle", margin: 0 });
   }
 });
-band(s, "每個候選品一張評估卡，月度選品會直接拿這本冊子過單；Luma 能代填的部分見頁 9。", 5.55);
+band(s, "每個候選品一張評估卡，月度選品會直接拿這本冊子過單；畢卡索 能代填的部分見頁 9。", 5.55);
 
 // ============ S3 三分鐘初篩 ============
 s = p.addSlide();
@@ -204,9 +204,9 @@ flags.forEach((f, i) => {
 });
 band(s, "工廠的每條回覆記進評估卡背面——談判時有據可依，換供應商時有檔可查。", 6.5);
 
-// ============ S9 Luma 代勞 ============
+// ============ S9 畢卡索 代勞 ============
 s = p.addSlide();
-header(s, "配合 Luma AI", "髒活交給 Luma，你只做判斷");
+header(s, "配合畢卡索 AI", "髒活交給畢卡索，你只做判斷");
 const ai = [
   ["「我想找新品」", "採購經理提問模式", "不知道從哪開始？它一題一題問你，帶你走完整個選品流程"],
   ["「評估這個新品」（截圖拖進對話）", "選品評估卡初稿", "賣點、售價區間、認證清單、風險、要問工廠的問題，一次列全"],
@@ -230,6 +230,6 @@ s.background = { color: INK };
 s.addText("貨比三家，先比這一冊。", { x: 0.9, y: 2.5, w: 11.5, h: 1.0, fontSize: 42, bold: true, color: "FFFFFF", fontFace: F, margin: 0 });
 s.addText("每個候選品一頁卡；月度選品會，用冊子過單。", { x: 0.9, y: 3.65, w: 10, h: 0.5, fontSize: 16, color: "B9C6D6", fontFace: F, margin: 0 });
 s.addShape("line", { x: 0.9, y: 4.5, w: 2.2, h: 0, line: { color: ACCENT, width: 3 } });
-s.addText("Luma · 敏寶團隊 AI　|　網頁 47.243.79.144　|　飛書搜 HarmesAgent", { x: 0.9, y: 4.72, w: 11, h: 0.4, fontSize: 12.5, color: "8A97A8", fontFace: F, margin: 0 });
+s.addText("畢卡索 · 敏寶團隊 AI　|　網頁 47.243.79.144　|　飛書搜 HarmesAgent", { x: 0.9, y: 4.72, w: 11, h: 0.4, fontSize: 12.5, color: "8A97A8", fontFace: F, margin: 0 });
 
 p.writeFile({ fileName: "1688選品篩選工作冊.pptx" }).then(() => console.log("OK 10 slides"));
