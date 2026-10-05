@@ -131,7 +131,11 @@ tr:hover td{background:#f6faff}.role-ADMIN{color:#b45309;font-weight:600}
 #login{max-width:320px;margin:120px auto;background:#fff;padding:28px;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,.1);text-align:center}
 #login input{width:100%;padding:10px;margin:14px 0;border:1px solid #d7dee8;border-radius:8px;font-size:15px}
 #err{color:#c0392b;font-size:13px;min-height:18px}
+#boot{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#f4f6f9;z-index:99}
+.spin{width:36px;height:36px;border:4px solid #e5e9f0;border-top-color:#E8590C;border-radius:50%;margin:0 auto 10px;animation:sp .9s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
 </style></head><body>
+<div id="boot"><div style="text-align:center"><div class="spin"></div><div style="color:#6b7a90;font-size:13px">正在載入用量數據…（首次約 2 秒）</div></div></div>
 <div id="login" style="display:none"><h1>畢卡索 用量统计</h1>
 <input id="pw" type="password" placeholder="管理密码" onkeydown="if(event.key=='Enter')doLogin()"><br>
 <div id="err"></div><button onclick="doLogin()">进入</button></div>
@@ -162,10 +166,12 @@ function fmtT(s){return s?String(s).replace('T',' ').slice(0,16):'—'}
 function pct(a,b){if(!b)return '<span class="up">新增</span>';const p=Math.round((a-b)/b*100);
   if(p===0)return '<span style="color:#8a97a8">持平</span>';
   return p>0?`<span class="up">▲ ${p}%</span>`:`<span class="down">▼ ${-p}%</span>`}
+var booted=false;
 async function load(){
 try{
+  if(!booted){document.getElementById('boot').style.display='flex'}
   const r = await fetch('api/stats');
-  if(r.status===401){login();return}
+  if(r.status===401){document.getElementById('boot').style.display='none';login();return}
   const d = await r.json();
   const agg={};d.agg.forEach(a=>agg[a._id]=a);
   const prev={};d.prev.forEach(a=>prev[a._id]=a);
@@ -209,7 +215,10 @@ try{
 
   document.getElementById('upd').textContent='更新于 '+new Date().toLocaleTimeString('zh-CN',{hour12:false});
   document.getElementById('app').style.display='block';
+  document.getElementById('boot').style.display='none';
+  booted=true;
 }catch(e){
+  document.getElementById('boot').style.display='none';
   document.getElementById('app').style.display='block';
   document.getElementById('cards').innerHTML='<div class="card"><b>!</b><small>加载失败：'+e+'</small></div>';
 }
@@ -243,7 +252,7 @@ async function doLogin(){
   if(r.ok){load();setInterval(()=>{if(document.getElementById('app').style.display!=='none')load()},60000)}
   else{document.getElementById('err').textContent='密码不对'}
 }
-function login(){document.getElementById('login').style.display='block';document.getElementById('app').style.display='none';document.getElementById('pw').focus()}
+function login(){document.getElementById('boot').style.display='none';document.getElementById('login').style.display='block';document.getElementById('app').style.display='none';document.getElementById('pw').focus()}
 load();
 </script></body></html>"""
 
