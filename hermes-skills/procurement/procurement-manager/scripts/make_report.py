@@ -118,8 +118,23 @@ def render_checklist(sl, y0, sec):
         y += 0.92
 
 
+def _verdict_color(text):
+    t = str(text)
+    if any(k in t for k in ("缺失", "沒有", "没有", "落后", "落後", "未提供")):
+        return ACCENT
+    if any(k in t for k in ("領先", "领先", "已配", "已達", "已达", "超越")):
+        return PRIMARY
+    return MUTED
+
+
 def render_table(sl, y0, sec):
     headers, rows = sec.get("headers", []), sec.get("rows", [])
+    vcol = sec.get("verdict_col")
+    if vcol is None:
+        for i, h in enumerate(headers):
+            if "判定" in str(h) or "差距" in str(h):
+                vcol = i
+                break
     n = len(rows) + 1
     h = min(0.55 * n + 0.15, 7.05 - y0)
     tbl = sl.shapes.add_table(n, len(headers), Inches(0.5), Inches(y0), Inches(W - 1), Inches(h)).table
@@ -138,7 +153,10 @@ def render_table(sl, y0, sec):
         for ci, val in enumerate(row):
             c = tbl.cell(ri, ci)
             c.text = str(val)
-            _tf(c.text_frame, 12.5, TEXT)
+            if vcol is not None and ci == vcol:
+                _tf(c.text_frame, 12.5, _verdict_color(val), bold=True)
+            else:
+                _tf(c.text_frame, 12.5, TEXT)
             c.fill.solid()
             c.fill.fore_color.rgb = RGBColor(0xFF, 0xFF, 0xFF) if ri % 2 else RGBColor(0xF6, 0xFA, 0xF9)
     if sec.get("note"):
@@ -176,7 +194,9 @@ def build_pptx(data, path):
     bg.line.fill.background()
     bg.shadow.inherit = False
     add_text(sl, 0.9, 1.7, 9, 0.4, "MAINPLAN 敏寶 · 採購調研", 14, ACCENT, bold=True)
-    add_text(sl, 0.9, 2.15, 11, 1.2, "選品調研報告 · " + data.get("category", ""), 44, RGBColor(0xFF, 0xFF, 0xFF), bold=True)
+    full_title = "選品調研報告 · " + data.get("category", "")
+    tsize = 44 if len(full_title) <= 17 else 30
+    add_text(sl, 0.9, 2.15, 11.5, 1.2, full_title, tsize, RGBColor(0xFF, 0xFF, 0xFF), bold=True)
     add_text(sl, 0.9, 3.5, 10, 0.5, data.get("window", "") + "　|　" + data.get("date", ""), 15, RGBColor(0xB9, 0xC6, 0xD6))
     badge(sl, 0.9, 4.3, data.get("conclusion", {}).get("verdict", "待定"), 1.15)
     reasons = data.get("conclusion", {}).get("reasons", [])
@@ -245,6 +265,11 @@ def build_pptx(data, path):
 
 
 # ---------- HTML ----------
+def _vc_hex(text):
+    c = _verdict_color(text)
+    return "#%02x%02x%02x" % (c[0], c[1], c[2]) if isinstance(c, RGBColor) else str(c)
+
+
 def esc(s):
     return html.escape(str(s), quote=False)
 
@@ -297,8 +322,18 @@ ul.act{list-style:none}.act li{padding:6px 0;color:#64748b;font-size:14px}
                                  f'{"✓" if it.get("pass") else "✗"}</span><b>{esc(it.get("text",""))}</b>'
                                  f'<div class="t">{esc(it.get("note",""))}</div></div>' for it in sec.get("items", [])))
         elif sec["type"] == "table":
+            vcol = sec.get("verdict_col")
+            if vcol is None:
+                for i, h in enumerate(sec.get("headers", [])):
+                    if "判定" in str(h) or "差距" in str(h):
+                        vcol = i
+                        break
+
+            def cell(c, ci=0):
+                return f'<span style="color:{_vc_hex(c) if ci == vcol else "#1f2937"};{"" if ci != vcol else "font-weight:700"}">{esc(c)}</span>'
+
             parts.append('<table><tr>' + "".join(f'<th>{esc(h)}</th>' for h in sec.get("headers", [])) + '</tr>'
-                         + "".join('<tr>' + "".join(f'<td>{esc(c)}</td>' for c in r) + '</tr>' for r in sec.get("rows", []))
+                         + "".join('<tr>' + "".join(f'<td>{cell(c, ci)}</td>' for ci, c in enumerate(r)) + '</tr>' for r in sec.get("rows", []))
                          + '</table>')
             if sec.get("note"):
                 parts.append(f'<div class="t" style="margin-top:8px">{esc(sec["note"])}</div>')
