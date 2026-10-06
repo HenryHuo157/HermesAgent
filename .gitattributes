@@ -1,0 +1,8 @@
+# 统一 LF：本仓库的 .sh/.py/.js 会被 scp 到 Linux 服务器执行，CRLF 会直接破坏脚本
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.pptx binary
+*.xlsx binary
+*.docx binary
+*.gz binary

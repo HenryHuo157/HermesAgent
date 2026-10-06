@@ -20,6 +20,8 @@ Mainplan（敏寶）的團隊 AI 助手 **畢卡索（Picasso）** 的完整部�
 | `lc-patches/` | LibreChat 界面補丁庫（技能選擇器、思考樣式、工作動詞、定時面板等；服務器上一鍵 `lc-repatch` 重打） |
 | `patch_*.py`（根目錄） | Hermes 側源碼補丁歷史（NUL 字節修復、活動時間線、MEDIA 内嵌、思考塊等） |
 | `taskspanel_app.py` | 定時任務面板後端（每用户自助創建 cron，systemd 服務） |
+| `hermes-repatch.sh` / `patch_fp_2026.py` / `patch_green_check_v2.py` | Hermes 補丁庫新增；服務器 `/opt/hermes-patches/` + `/usr/local/bin/hermes-repatch`，升級 Hermes 後 root 跑一次即可補齊全部源碼補丁 |
+| `server-tools/` | `picasso-backup.sh` 每日備份、`picasso-monitor.py` 飛書監控告警（服務器 /usr/local/bin/，root cron） |
 | `feishu_setup.py` / `wx_login.py` | 飛書/微信渠道接入脚本 |
 | `dump_skills_json.py` | 技能索引導出（供前端技能選擇器） |
 | `chatpage/` | 早期自製聊天頁（已弃用，備份） |
@@ -31,7 +33,7 @@ Mainplan（敏寶）的團隊 AI 助手 **畢卡索（Picasso）** 的完整部�
 - Hermes：`/home/admin/.hermes/`（config.yaml / SOUL.md / skills/）
 - LibreChat：`/opt/lc-run/`（compose）、`/opt/librechat/librechat.yaml`
 - 界面補丁庫：`/opt/lc-patches/`（重打命令 `lc-repatch`）
-- 每日備份：`/opt/backups/`（7 天滾動）
+- 每日備份：`/opt/backups/`（7 天滾動，`picasso-backup` cron；mongo/Hermes/配置經 Syncthing `picasso-backups` 資料夾異地到 NAS `X:\ServerBackups\Picasso`）
 
 ## 安全約定
 

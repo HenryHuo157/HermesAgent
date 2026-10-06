@@ -1,8 +1,31 @@
 password.txt
 *.log
 .env
+!.env.example
 __pycache__/
 node_modules/
 package.json
 package-lock.json
 *.pdf
+
+# 敏感文件（与 Syncthing .stignore 保持一致，绝不入库）
+*.pem
+*.key
+*.pfx
+*.p12
+id_rsa*
+*password*
+*密碼*
+*密码*
+FeiShu.txt
+火山API.txt
+API key.txt
+*.db
+*.sqlite
+
+# 同步/系统杂项
+.stfolder/
+.stversions/
+.sync-conflict*
+desktop.ini
+Thumbs.db

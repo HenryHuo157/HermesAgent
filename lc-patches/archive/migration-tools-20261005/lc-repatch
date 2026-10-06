@@ -1,0 +1,14 @@
+#!/bin/bash
+# LibreChat 界面补丁手动重打（唯一补丁文件：/opt/lc-patches/lc_custom.js）
+#
+# 平时不需要跑：容器每次启动会自动打补丁（docker-compose 启动命令钩子），
+# 升级/重建容器后界面定制自动恢复。
+# 本脚本用于：手动改了 lc_custom.js 后立即生效（顺带重启容器+修图片目录权限）。
+#
+# LibreChat 启动时缓存 index.html，所以打完补丁必须重启才可见。
+set -e
+docker exec librechat-api node /opt/lc-patches/lc_custom.js
+# 图片上传目录权限（容器以 uid 1000 运行，目录属主必须是 1000，否则粘贴图片报 Error processing file）
+if [ -d /opt/librechat/images ]; then chown -R 1000:1000 /opt/librechat/images; fi
+docker restart librechat-api >/dev/null
+echo "[补丁已重打并重启，约 40 秒后就绪]"
