@@ -21,7 +21,7 @@ Mainplan（敏寶）的團隊 AI 助手 **畢卡索（Picasso）** 的完整部�
 | `patch_*.py`（根目錄） | Hermes 側源碼補丁歷史（NUL 字節修復、活動時間線、MEDIA 内嵌、思考塊等） |
 | `taskspanel_app.py` | 定時任務面板後端（每用户自助創建 cron，systemd 服務） |
 | `hermes-repatch.sh` / `patch_fp_2026.py` / `patch_green_check_v2.py` | Hermes 補丁庫新增；服務器 `/opt/hermes-patches/` + `/usr/local/bin/hermes-repatch`，升級 Hermes 後 root 跑一次即可補齊全部源碼補丁 |
-| `server-tools/` | `picasso-backup.sh` 每日備份、`picasso-monitor.py` 飛書監控告警（服務器 /usr/local/bin/，root cron） |
+| `server-tools/` | `picasso-backup.sh` 每日備份、`picasso-monitor.py` 飛書監控告警（服務器 /usr/local/bin/，root cron）；`picasso-dev.sh`/`build-dev-hermes.sh`/`build-dev-lc.sh`/`hermes-repatch-dev.sh`/`fix-dev-paths.sh`/`verify-dev*.sh` = **Live/Dev 雙環境**的 Dev 側腳本（Dev 環境詳見部署清單「Live/Dev 雙環境」章節） |
 | `feishu_setup.py` / `wx_login.py` | 飛書/微信渠道接入脚本 |
 | `dump_skills_json.py` | 技能索引導出（供前端技能選擇器） |
 | `chatpage/` | 早期自製聊天頁（已弃用，備份） |

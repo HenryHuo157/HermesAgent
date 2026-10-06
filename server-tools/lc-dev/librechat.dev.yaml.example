@@ -1,0 +1,24 @@
+# Picasso Dev LibreChat 对接配置模板
+# 服务器上的真实文件由生产 /opt/librechat/librechat.yaml sed 派生（apiKey 直接继承，不入库）：
+#   sed -e 's/8642/8643/' -e 's/name: "Hermes"/name: "Hermes Dev"/' \
+#     /opt/librechat/librechat.yaml > /opt/lc-dev/librechat.yaml
+version: 1.2.1
+cache: true
+endpoints:
+  custom:
+    - name: "Hermes Dev"
+      apiKey: "<同生产 API_SERVER_KEY，见 /home/dev/.hermes/.env>"
+      baseURL: "http://host.docker.internal:8643/v1"
+      models:
+        default: ["hermes-agent"]
+        fetch: false
+      maxContextTokens: 500000
+      tokenConfig:
+        hermes-agent:
+          prompt: 0
+          completion: 0
+          context: 500000
+      titleConvo: true
+      titleModel: "hermes-agent"
+      summaryModel: "hermes-agent"
+      visionCapable: true

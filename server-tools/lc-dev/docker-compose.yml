@@ -1,0 +1,29 @@
+# Picasso Dev LibreChat（与生产 /opt/lc-run/docker-compose.yml 对应的 Dev 版）
+# 差异：容器名 -dev 后缀、端口 127.0.0.1:3081、无 RAG 栈、restart=no（按需启停，不随机自启）
+# 由 picasso-dev start|stop 统一启停；UI 补丁用 /opt/lc-patches-dev（独立于生产的 /opt/lc-patches）
+name: lc-dev
+
+services:
+  api:
+    image: registry.librechat.ai/librechat-ai/librechat-dev:latest
+    container_name: librechat-dev-api
+    command: sh -c "node /opt/lc-patches-dev/lc_custom.js || true; exec npm run backend"
+    ports:
+      - "127.0.0.1:3081:3080"
+    depends_on:
+      - mongodb
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    env_file: .env
+    volumes:
+      - /opt/lc-dev/librechat.yaml:/app/librechat.yaml
+      - /opt/lc-dev/images:/app/client/public/images
+      - /opt/lc-patches-dev:/opt/lc-patches-dev:ro
+    restart: "no"
+  mongodb:
+    image: mongo:8.0.20
+    container_name: librechat-dev-mongo
+    command: --wiredTigerCacheSizeGB 0.25
+    volumes:
+      - /opt/lc-dev/data-node:/data/db
+    restart: "no"
