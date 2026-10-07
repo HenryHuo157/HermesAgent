@@ -9,18 +9,23 @@
  * 自动化：docker-compose 把 /opt/lc-patches 挂进容器，启动命令先跑本文件再起后端，
  *         所以升级/重建容器后界面定制自动恢复，不再依赖记得手动跑 lc-repatch。
  *
- * 目录（6 段）：
+ * 目录（7 段）：
  *   [head] hide-badges-2026     隐藏对 Hermes 无效的工具芯片行（纯 CSS）
  *   [head] tasks-panel-2026     ⏰ 定時任務面板 + 定時按钮
  *   [head] think-ui-2026b       思考块浅色小字、结束后自动收起（ZCode 风格，取代 thinking-style/working-verbs）
  *   [head] skills-picker-v7     🧩 技能选择器（按钮在定時鍵右侧）+ 白色 Artifact 卡片（取代 artifact-card/button-v5）
  *   [head] effort-selector-2026 🧠 思考程度选择器（点击循环 默认/关/低/中/高）
  *   [body] usage-link-2026c     用量统计悬浮贴签（可拖动，松手吸附左边；/usage/ 面板入口）
+ *   [body] version-check-2026   📢 版本更新提示：每60秒查 /picasso-version.txt，有新版弹卡片，
+ *                               用户点「立即更新」才刷新（deploy 脚本在容器就绪后写标记文件）
  *
- * 注入位置：head 五段插在 </head> 前；usage-link 一段插在 </body> 前（含按钮元素）。
+ * 注入位置：head 五段插在 </head> 前；body 两段插在 </body> 前。
  * 每个目标位置整体包在哨兵注释里，重打时先剥哨兵块再注入，天然幂等。
  * 段落用 String.raw 包裹——反斜杠原样保留（块内 JS 正则不会被转义破坏）；
  * 但仍不要引入反引号 ` 和 ${ 字符，必要时转义。
+ * 版本约定：PATCH_VERSION 就是用户所见的版本号——每次改内容 +1；
+ * deploy_lc_patches.py 会在容器重启就绪后把它写进 /picasso-version.txt，
+ * 所有打开着的旧页面会在 60 秒内弹「有新版本」，用户点更新才刷新。
  * ==========================================================================*/
 'use strict';
 const fs = require('fs');
@@ -28,8 +33,9 @@ const fs = require('fs');
 const INDEX = process.env.LC_INDEX_PATH || '/app/client/dist/index.html';
 const HEAD_SENTINEL = 'lc-custom:head:v1';
 const BODY_SENTINEL = 'lc-custom:body:v1';
-/* 内容版本号：改了任何段落内容就把这个数 +1，部署时才会重新注入 */
-const PATCH_VERSION = 6;
+/* 内容版本号：改了任何段落内容就把这个数 +1，部署时才会重新注入。
+   这个数同时是用户在更新弹窗里看到的版本号（deploy 脚本发布时写进 /picasso-version.txt） */
+const PATCH_VERSION = 7;
 
 /* 历史 PATCH-MARK —— 每次重打前剥掉，兼容老版本注入块（含本文件旧版） */
 const LEGACY_MARKS = [
@@ -707,6 +713,65 @@ button[data-artifact-trigger]::after{
   });
   restore();
 })();
+</script>` },
+  { mark: 'version-check-2026', target: 'body', html: String.raw`
+<style>
+/* PATCH-MARK: version-check-2026 — 版本更新提示卡片（用戶點「立即更新」才刷新） */
+#lc-updatecard{
+  position:fixed;right:20px;bottom:20px;z-index:99999;display:none;
+  width:280px;background:#fff;border:1px solid #d5d9e0;border-radius:14px;
+  box-shadow:0 12px 40px rgba(15,23,42,.22);
+  padding:16px 18px;color:#1f2328;font-size:13px;line-height:1.5;
+}
+@media (prefers-color-scheme: dark){ #lc-updatecard{background:#161a22;color:#e6eaf2;border-color:#2a2f3a;} }
+#lc-updatecard .uc-t{font-size:14.5px;font-weight:700;margin-bottom:4px;}
+#lc-updatecard .uc-s{color:#8b93a5;font-size:12px;margin-bottom:12px;}
+#lc-updatecard .uc-b{display:flex;gap:8px;}
+#lc-updatecard button{flex:1;border-radius:9px;padding:8px 0;font-size:13px;font-weight:600;cursor:pointer;border:none;font-family:inherit;}
+#lc-updatecard .uc-go{background:#059669;color:#fff;}
+#lc-updatecard .uc-go:hover{background:#047857;}
+#lc-updatecard .uc-later{background:transparent;color:inherit;border:1px solid rgba(130,140,160,.35);}
+</style>
+<script>
+/* PATCH-MARK: version-check-2026 — 每60秒查 /picasso-version.txt（容器 dist 静态文件，
+   deploy 脚本在重启就绪后才写入），发现比本页版本新就弹卡片；點「立即更新」才 reload，
+   「稍後」靜默 1 小時。MINE 由注入器替换为发布时的 PATCH_VERSION。 */
+(function(){
+  var MINE=__PATCH_VERSION__, KEY='lc-update-snooze';
+  var card=null;
+  function show(){
+    if(card){ card.style.display='block'; return; }
+    card=document.createElement('div');
+    card.id='lc-updatecard';
+    card.innerHTML='<div class="uc-t">🎉 畢卡索有新版本</div>'+
+      '<div class="uc-s">刷新後即可使用新版本，當前對話不受影響</div>'+
+      '<div class="uc-b"><button class="uc-go">立即更新</button><button class="uc-later">稍後</button></div>';
+    document.body.appendChild(card);
+    card.querySelector('.uc-go').onclick=function(){
+      try{ localStorage.removeItem(KEY); }catch(e){}
+      location.reload();
+    };
+    card.querySelector('.uc-later').onclick=function(){
+      try{ localStorage.setItem(KEY, String(Date.now()+60*60*1000)); }catch(e){}
+      card.style.display='none';
+    };
+    card.style.display='block';
+  }
+  function check(){
+    fetch('/picasso-version.txt?ts='+Date.now(), {cache:'no-store'})
+      .then(function(r){ return r.ok ? r.text() : ''; })
+      .then(function(t){
+        var v=parseInt((t||'').trim(),10);
+        if(isNaN(v) || v<=MINE) return;
+        var snooze=0;
+        try{ snooze=parseInt(localStorage.getItem(KEY),10)||0; }catch(e){}
+        if(Date.now()<snooze) return;
+        show();
+      })
+      .catch(function(){});
+  }
+  if(MINE>0){ check(); setInterval(check, 60000); }
+})();
 </script>` }
 ];
 
@@ -732,7 +797,7 @@ function main(){
     process.exit(1);
   }
 
-  /* 0) 快速路径：5 个标记齐全 + 哨兵在 + 版本号一致 = 已打过，什么都不做。
+  /* 0) 快速路径：全部标记齐全 + 哨兵在 + 版本号一致 = 已打过，什么都不做。
      改了任何段落内容后必须把 PATCH_VERSION +1，否则不会重新注入！ */
   const missing = SECTIONS.filter(s => html.indexOf('PATCH-MARK: ' + s.mark) < 0);
   const normalized = html.indexOf('<!-- ' + HEAD_SENTINEL) >= 0;
@@ -751,13 +816,15 @@ function main(){
   html = html.replace(new RegExp('<!-- lc-custom:patch-version:\\d+ -->\\n?', 'g'), '');
   for (const m of LEGACY_MARKS) html = stripMark(html, m);
 
-  /* 2) 按 target 重新注入 */
+  /* 2) 按 target 重新注入（__PATCH_VERSION__ 占位符替换为发布时版本号，
+     version-check 段以此知道自己"是哪个版本"） */
+  const ver = String(PATCH_VERSION);
   const headChunk = '<!-- lc-custom:patch-version:' + PATCH_VERSION + ' -->\n'
     + '<!-- ' + HEAD_SENTINEL + ' START -->\n'
-    + SECTIONS.filter(s => s.target === 'head').map(s => s.html).join('\n')
+    + SECTIONS.filter(s => s.target === 'head').map(s => s.html.replace(/__PATCH_VERSION__/g, ver)).join('\n')
     + '\n<!-- ' + HEAD_SENTINEL + ' END -->\n';
   const bodyChunk = '<!-- ' + BODY_SENTINEL + ' START -->\n'
-    + SECTIONS.filter(s => s.target === 'body').map(s => s.html).join('\n')
+    + SECTIONS.filter(s => s.target === 'body').map(s => s.html.replace(/__PATCH_VERSION__/g, ver)).join('\n')
     + '\n<!-- ' + BODY_SENTINEL + ' END -->\n';
 
   const hi = html.indexOf('</head>');
