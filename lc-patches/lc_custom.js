@@ -10,7 +10,7 @@
  *   node lc_custom.js --strip          剥离 index.html 内联注入块（迁移到浏览器模式时用一次）
  *   node lc_custom.js --inject-legacy  旧式内联注入（仅 nginx 分发不可用时的应急回退）
  *
- * 目录（9 段）：
+ * 目录（10 段）：
  *   [head] hide-badges-2026     隐藏对 Hermes 无效的工具芯片行（纯 CSS）
  *   [head] tasks-panel-2026     ⏰ 定時任務面板 + 定時按钮
  *   [head] think-ui-2026b       思考块浅色小字、结束后自动收起（ZCode 风格，取代 thinking-style/working-verbs）
@@ -24,6 +24,7 @@
  *                               右下角橙色胶囊（叠在版本徽章上方） + 顶部琥珀色细线；生产（443 端口）永不显示
  *   [body] desktop-pet-2026     🐾 桌面小宠物「小畢」：底部漫游、点击摸摸冒爱心、
  *                               双击睡觉、右键回家（刷新回来）；prefers-reduced-motion 不出场
+ *   [body] theme-toggle-2026    ☀️/🌙 应用内明暗切换（登录页用原生按钮；读写 color-theme）
  *
  * 版本约定：PATCH_VERSION 就是用户所见的版本号——每次改内容 +1；
  * deploy_lc_patches.py 发布时把它写进 /picasso-version.txt，
@@ -34,7 +35,7 @@
 var HEAD_SENTINEL = 'lc-custom:head:v1';
 var BODY_SENTINEL = 'lc-custom:body:v1';
 /* 内容版本号：改了任何段落内容就把这个数 +1。它同时是用户在版本徽章/弹窗里看到的版本号。 */
-var PATCH_VERSION = 15;
+var PATCH_VERSION = 17;
 var NODE_MODE = (typeof window === 'undefined' || typeof document === 'undefined');
 
 /* 历史 PATCH-MARK —— 每次重打前剥掉，兼容老版本注入块（含本文件旧版） */
@@ -63,6 +64,8 @@ const SECTIONS = [
 <style>
 /* PATCH-MARK: hide-badges-2026 — 隐藏对 Hermes 无效的工具芯片行 */
 .relative.flex.flex-wrap.items-center.gap-2:has(> .badge-icon){ display:none !important; }
+/* 隱藏登入頁高對比度切換（誤觸會改變全套配色；明暗用旁邊的原生按鈕或應用內 ☀️/🌙） */
+button[aria-label="Toggle high contrast"]{ display:none !important; }
 </style>` },
   { mark: 'tasks-panel-2026', target: 'head', html: String.raw`
 <style>
@@ -987,6 +990,47 @@ button[data-artifact-trigger]::after{
     if(!isNaN(x)) pet.style.left=clampX(x)+'px';
   });
   loop();
+})();
+</script>` },
+  { mark: 'theme-toggle-2026', target: 'body', html: String.raw`
+<style>
+/* PATCH-MARK: theme-toggle-2026 — 應用內明暗切換（登入頁用原生按鈕，此處僅應用內出場） */
+#lc-themetoggle{position:fixed;right:12px;bottom:76px;z-index:99996;
+  width:34px;height:34px;border-radius:50%;border:1px solid rgba(130,140,160,.35);
+  background:rgba(255,255,255,.92);color:#1f2328;font-size:15px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 2px 8px rgba(15,23,42,.12);transition:border-color .15s;}
+@media (prefers-color-scheme: dark){ #lc-themetoggle{background:rgba(22,26,34,.92);color:#e6eaf2;} }
+#lc-themetoggle:hover{border-color:#6366f1;}
+</style>
+<script>
+/* PATCH-MARK: theme-toggle-2026 — 讀寫 localStorage color-theme（light/dark），
+   點擊切換並重載生效。登入頁已有原生 Toggle theme 按鈕時不出場（分階段探測防競態）。 */
+(function(){
+  /* SPA 路由切換不會重跑腳本——用輕量巡檢保證：登入頁隱身（原生按鈕足夠），
+     應用內出場；圖標隨 color-theme 自動同步 */
+  function ensure(){
+    if(!document.body) return;
+    var b = document.getElementById('lc-themetoggle');
+    if(document.querySelector('button[aria-label="Toggle theme"]')){
+      if(b) b.remove();
+      return;
+    }
+    if(!b){
+      b = document.createElement('button');
+      b.id = 'lc-themetoggle';
+      b.title = '切換深色／淺色';
+      b.onclick = function(){
+        var c = localStorage.getItem('color-theme') || 'light';
+        localStorage.setItem('color-theme', c.indexOf('dark') >= 0 ? 'light' : 'dark');
+        location.reload();
+      };
+      document.body.appendChild(b);
+    }
+    b.textContent = (localStorage.getItem('color-theme')||'light').indexOf('dark') >= 0 ? '☀️' : '🌙';
+  }
+  setInterval(ensure, 1000);
+  ensure();
 })();
 </script>` }
 ];
