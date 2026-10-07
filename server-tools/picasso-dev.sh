@@ -7,6 +7,7 @@
 #   picasso-dev status      # 看两边状态
 #   picasso-dev lc-restart  # 只重启 Dev LibreChat（改 UI 补丁后生效用）
 #   picasso-dev repatch     # Dev Hermes 源码补丁重打（= hermes-repatch-dev）
+#   picasso-dev skills      # 重新生成 Dev 技能索引并注入容器（改了 /home/dev/.hermes/skills 后）
 #
 # 对外不暴露：没有 nginx 条目、没有防火墙端口。本机访问：
 #   LibreChat Dev  http://127.0.0.1:3081   （SSH 隧道：ssh -L 3081:127.0.0.1:3081 root@服务器）
@@ -21,6 +22,7 @@ case "${1:-status}" in
     $UG start hermes-gateway
     echo "—— 启动 Dev LibreChat（127.0.0.1:3081）——"
     docker compose -f "$C" up -d
+    picasso-dev-skills || true
     sleep 2
     picasso-dev status
     echo "提示：Dev LibreChat 约 40 秒后就绪；隧道示例见脚本头部注释。" ;;
@@ -39,6 +41,8 @@ case "${1:-status}" in
     docker restart librechat-dev-api >/dev/null && echo "Dev LibreChat 重启完成，约 40 秒后就绪" ;;
   repatch)
     /usr/local/bin/hermes-repatch-dev ;;
+  skills)
+    /usr/local/bin/picasso-dev-skills ;;
   *)
-    echo "用法: picasso-dev start|stop|status|lc-restart|repatch" ;;
+    echo "用法: picasso-dev start|stop|status|lc-restart|repatch|skills" ;;
 esac

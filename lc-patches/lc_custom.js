@@ -9,7 +9,7 @@
  * 自动化：docker-compose 把 /opt/lc-patches 挂进容器，启动命令先跑本文件再起后端，
  *         所以升级/重建容器后界面定制自动恢复，不再依赖记得手动跑 lc-repatch。
  *
- * 目录（7 段）：
+ * 目录（8 段）：
  *   [head] hide-badges-2026     隐藏对 Hermes 无效的工具芯片行（纯 CSS）
  *   [head] tasks-panel-2026     ⏰ 定時任務面板 + 定時按钮
  *   [head] think-ui-2026b       思考块浅色小字、结束后自动收起（ZCode 风格，取代 thinking-style/working-verbs）
@@ -18,6 +18,8 @@
  *   [body] usage-link-2026c     用量统计悬浮贴签（可拖动，松手吸附左边；/usage/ 面板入口）
  *   [body] version-check-2026   📢 版本更新提示：每60秒查 /picasso-version.txt，有新版弹卡片，
  *                               用户点「立即更新」才刷新（deploy 脚本在容器就绪后写标记文件）
+ *   [body] dev-badge-2026       🚧 DEV 环境标识：仅 localhost:3081（SSH 隧道）显示，
+ *                               左下角橙色胶囊 + 顶部琥珀色细线；生产（443 端口）永不显示
  *
  * 注入位置：head 五段插在 </head> 前；body 两段插在 </body> 前。
  * 每个目标位置整体包在哨兵注释里，重打时先剥哨兵块再注入，天然幂等。
@@ -35,7 +37,7 @@ const HEAD_SENTINEL = 'lc-custom:head:v1';
 const BODY_SENTINEL = 'lc-custom:body:v1';
 /* 内容版本号：改了任何段落内容就把这个数 +1，部署时才会重新注入。
    这个数同时是用户在更新弹窗里看到的版本号（deploy 脚本发布时写进 /picasso-version.txt） */
-const PATCH_VERSION = 7;
+const PATCH_VERSION = 10;
 
 /* 历史 PATCH-MARK —— 每次重打前剥掉，兼容老版本注入块（含本文件旧版） */
 const LEGACY_MARKS = [
@@ -415,10 +417,16 @@ button[data-artifact-trigger]::after{
     });
   }
   function ensureData(cb){
-    if(DATA){cb(DATA);return;}
-    fetch('/m/skills.json').then(function(r){return r.json();}).then(function(d){
-      DATA=d.skills||[];cb(DATA);
-    }).catch(function(){cb([]);});
+    /* 空结果不缓存——登录后立即打开可能撞上应用挂载期导致首拉失败，重试而不是永远空 */
+    if(DATA && DATA.length){cb(DATA);return;}
+    /* 双通道：Dev 走 /skills.json（容器 dist 靜態，picasso-dev-skills 注入）；
+       生產 /skills.json 不存在 → 自動回退 /m/skills.json（nginx → /srv/hermes-share） */
+    fetch('/skills.json').then(function(r){ if(!r.ok) throw 0; return r.json(); })
+      .catch(function(){ return fetch('/m/skills.json').then(function(r){ return r.json(); }); })
+      .then(function(d){
+        DATA=d.skills||[];cb(DATA);
+      })
+      .catch(function(){cb([]);});
   }
   function composerRoot(ta){
     return ta.closest('form') || (ta.parentElement && ta.parentElement.parentElement) || ta.parentElement;
@@ -771,6 +779,42 @@ button[data-artifact-trigger]::after{
       .catch(function(){});
   }
   if(MINE>0){ check(); setInterval(check, 60000); }
+})();
+</script>` },
+  { mark: 'dev-badge-2026', target: 'body', html: String.raw`
+<style>
+/* PATCH-MARK: dev-badge-2026 — DEV 環境標識（僅 localhost:3081 顯示，生產永不顯示） */
+#lc-devbadge{
+  position:fixed;left:12px;bottom:12px;z-index:99998;
+  background:linear-gradient(160deg,#f59e0b,#d97706);
+  color:#fff;font-size:12px;font-weight:700;letter-spacing:.5px;
+  padding:5px 14px;border-radius:999px;
+  box-shadow:0 2px 10px rgba(217,119,6,.4);
+  cursor:help;user-select:none;-webkit-user-select:none;
+}
+#lc-devline{
+  position:fixed;top:0;left:0;right:0;height:3px;z-index:99998;
+  background:linear-gradient(90deg,#f59e0b,#d97706,#f59e0b);
+  pointer-events:none;
+}
+</style>
+<script>
+/* PATCH-MARK: dev-badge-2026 — 埠號 3081（SSH 隧道）= Dev 環境才顯示；生產 443 端口不顯示 */
+(function(){
+  if(location.port !== '3081') return;
+  function mount(){
+    if(!document.body) return setTimeout(mount, 300);
+    if(document.getElementById('lc-devbadge')) return;
+    var line=document.createElement('div');
+    line.id='lc-devline';
+    document.body.appendChild(line);
+    var b=document.createElement('div');
+    b.id='lc-devbadge';
+    b.textContent='🚧 DEV 環境';
+    b.title='這是開發環境（localhost:3081），隨便折騰都不影響線上用戶';
+    document.body.appendChild(b);
+  }
+  mount();
 })();
 </script>` }
 ];

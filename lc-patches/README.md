@@ -2,7 +2,7 @@
 
 ## 改界面只动一个文件
 
-**`lc_custom.js`** = 全部界面定制的唯一源文件，内含 7 个补丁段（改前先看文件头部的目录注释）：
+**`lc_custom.js`** = 全部界面定制的唯一源文件，内含 8 个补丁段（改前先看文件头部的目录注释）：
 
 | 段标记 | 位置 | 功能 |
 |---|---|---|
@@ -13,6 +13,7 @@
 | effort-selector-2026 | `</head>` 前 | 🧠 思考程度选择器（默认/关/低/中/高循环） |
 | usage-link-2026c | `</body>` 前 | 左栏用量统计图标 |
 | version-check-2026 | `</body>` 前 | 📢 版本更新提示（弹窗，用户点更新才刷新） |
+| dev-badge-2026 | `</body>` 前 | 🚧 DEV 环境标识（仅 localhost:3081 显示，生产永不显示） |
 
 ## 怎么改、怎么生效
 
@@ -39,6 +40,13 @@ python deploy_lc_patches.py --dev      # 推 Dev（librechat-dev-api，端口 30
 `--no-restart` 只 stage 补丁、**不写版本标记**——旧页面不会收到提示（防止提示了刷新却拿不到新版）；
 注意若容器因其他原因重启，staged 版本会自动激活。首次从无标记状态发布后，
 所有旧页面（内嵌版本 0）都会收到一次提示，属预期行为。
+
+### 技能选择器的数据双通道（skills-picker-v7）
+
+读法：先 `/skills.json`（**Dev 通道**：`picasso-dev-skills` 从 `/home/dev/.hermes/skills`
+生成后 docker cp 进 Dev 容器 dist）→ 失败回退 `/m/skills.json`（**生产通道**：nginx →
+`/srv/hermes-share/skills.json`，由 `ai-skills-json` 刷新）。空结果不缓存（防登录后
+立即打开撞上应用挂载期）。改了 Dev 技能后跑 `picasso-dev skills` 刷新索引。
 
 ## 自动化（不怕升级/重建）
 

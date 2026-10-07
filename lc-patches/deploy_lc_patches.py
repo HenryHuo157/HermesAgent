@@ -74,6 +74,9 @@ else:
                  f'docker exec {CONTAINER} sh -c "echo {VER} > /app/client/dist/picasso-version.txt"')
     sh(['ssh', '-o', 'BatchMode=yes', HOST,
         f'docker exec {CONTAINER} sh -c "echo {VER} > /app/client/dist/picasso-version.txt"'])
+    if DEV:
+        rc2, out2, err2 = run(['ssh', '-o', 'BatchMode=yes', HOST, 'picasso-dev-skills'])
+        print(out2 or err2)
     print(f'[deploy{TAG}] v{VER} 发布完成：容器就绪，版本标记已写入。'
           f'开着的旧页面将在 60 秒内弹「有新版本」，用户点「立即更新」才会刷新。')
     if cur == VER:
