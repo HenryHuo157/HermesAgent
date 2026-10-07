@@ -13,25 +13,33 @@
 | effort-selector-2026 | `</head>` 前 | 🧠 思考程度选择器（默认/关/低/中/高循环） |
 | usage-link-2026c | `</body>` 前 | 左栏用量统计图标 |
 | version-check-2026 | `</body>` 前 | 📢 版本更新提示（弹窗，用户点更新才刷新）+ 常驻版本徽章 |
-| dev-badge-2026 | `</body>` 前 | 🚧 DEV 环境标识（仅 localhost:3081 显示，生产永不显示） |
+| dev-badge-2026 | `</body>` 前 | 🚧 DEV 环境标识（仅 localhost:3082 显示，生产永不显示） |
 | desktop-pet-2026 | `</body>` 前 | 🐾 桌面小宠物「小畢」（漫游/摸摸/睡觉/右键回家） |
 
-## 怎么改、怎么生效
+## 怎么改、怎么生效（零重启）
 
 ```bash
 # 1. 编辑 lc_custom.js 对应段落（注意头部警告：段内是 String.raw，勿引入反引号和 ${）
-#    ⚠️ 改了段落内容后，把文件里 PATCH_VERSION 的数字 +1，否则部署时不会重新注入！
-# 2. 一键部署（scp + 容器内打补丁 + 重启 + 等就绪 + 写版本标记，约 1 分钟）：
+#    ⚠️ 改了段落内容后，把文件里 PATCH_VERSION 的数字 +1（= 用户在徽章/弹窗里看到的版本号）
+# 2. 一键发布（scp + nginx 分发自检 + 写版本标记，约 5 秒，容器零重启、用户零打断）：
 python deploy_lc_patches.py            # 推生产
-python deploy_lc_patches.py --dev      # 推 Dev（librechat-dev-api，端口 3081）
+python deploy_lc_patches.py --dev      # 推 Dev（nginx 3082 分发，浏览器 localhost:3082 刷新即见）
 ```
 
-容器里 LibreChat 启动时会缓存 index.html，所以改动必须重启容器才可见——
-容器启动命令里带了自动补丁钩子，重启即重打，不用担心。
+老页面由版本弹窗提示、用户点「立即更新」/点左下角徽章刷新后才进入新版——发布过程和结果都不打断任何人。
+
+### 双模式架构（2026-10-07 零重启改造）
+
+lc_custom.js 是**双模式单文件**：
+
+- **浏览器模式**：nginx 对页面 `sub_filter` 注入 `<script src="/lc_custom.js"></script>`（`Cache-Control: no-cache`），浏览器直接加载本文件——检测到 `window` 就把 9 段补丁挂到页面（style/元素走 innerHTML，script 重建执行）。
+- **注入器模式（node，应急）**：检测到 Node 环境时可用。默认 no-op（容器启动钩子安全空转）；`--strip` 剥离 index.html 内联块（迁移用）；`--inject-legacy` 恢复旧式内联注入（nginx 分发不可用时的应急回退）。
+
+容器里 LibreChat 缓存 index.html 的老问题从此无关——界面发布不再触碰容器。`--restart` 参数保留给应急；`--strip-restart` 是一次性迁移工具（已于 2026-10-07 对生产执行完毕）。
 
 ### 版本更新弹窗 + 常驻版本徽章（version-check-2026）
 
-`PATCH_VERSION` 同时是**用户所见的版本号**。正常发布（重启路径）会等容器就绪后把版本号写进
+`PATCH_VERSION` 同时是**用户所见的版本号**。发布把版本号写进
 容器 `/app/client/dist/picasso-version.txt`（免认证静态文件，Dev/生产通用）；
 所有开着的旧页面每 60 秒轮询一次，发现新版本就在右下角弹「🎉 畢卡索有新版本」：
 
@@ -55,14 +63,10 @@ python deploy_lc_patches.py --dev      # 推 Dev（librechat-dev-api，端口 30
 
 ## 自动化（不怕升级/重建）
 
-服务器 `/opt/lc-run/docker-compose.yml` 里（2026-10-05 配置，备份 `.bak-20261005`）：
-
-- 把 `/opt/lc-patches` 只读挂载进容器；
-- api 服务 `command` 覆写为：先 `node /opt/lc-patches/lc_custom.js`，再 `exec npm run backend`。
-
-所以**升级镜像 / `docker compose up -d` 重建容器后，界面定制自动恢复**，无需手动补。
-
-服务器上的手动兜底命令 `lc-repatch`（/usr/local/bin/）= 打补丁 + 修图片目录权限 + 重启。
+- nginx（/etc/nginx/conf.d/hermes-public.conf，备份 `.bak-20261007-zero-restart`）：生产 443 的 `location /` 带 sub_filter + `location = /lc_custom.js`（root /opt/lc-patches）；Dev 走独立 server 块 `listen 127.0.0.1:3082`（root /opt/lc-patches-dev → 容器 3081）。
+- **升级镜像 / 重建容器后界面自动恢复，且连"重打补丁"都不需要**：新容器从镜像拿到干净的 index.html，nginx sub_filter 照常注入脚本标签，界面照常工作。
+- 容器启动钩子（compose command 里的 `node /opt/lc-patches/lc_custom.js || true`）保留但 no-op，compose 无需改动。
+- 服务器上的 `lc-repatch`（/usr/local/bin/）已无日常用途（保留做图片目录权限修复）。
 
 ## 目录结构
 

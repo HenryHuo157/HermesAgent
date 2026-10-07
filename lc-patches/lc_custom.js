@@ -1,13 +1,14 @@
 #!/usr/bin/env node
 /* ============================================================================
- * LibreChat 界面定制补丁 —— 唯一源文件（合并自原 5 个 patch_*.py，2026-10-05）
+ * LibreChat 界面定制补丁 —— 唯一源文件 · 双模式（2026-10-07 零重启改造）
  * ============================================================================
- * 改界面 = 改本文件对应段落，然后二选一生效：
- *   本机:  python deploy_lc_patches.py            （scp 到服务器 + 容器内立即生效）
- *   服务器: docker exec librechat-api node /opt/lc-patches/lc_custom.js
+ * 【浏览器模式】nginx 对页面注入 <script src="/lc_custom.js">（Cache-Control: no-cache），
+ *   浏览器直接加载本文件、把 9 段补丁挂到页面上。
+ *   改界面 = scp 本文件 + 写版本标记 —— 容器零重启、用户零打断。
  *
- * 自动化：docker-compose 把 /opt/lc-patches 挂进容器，启动命令先跑本文件再起后端，
- *         所以升级/重建容器后界面定制自动恢复，不再依赖记得手动跑 lc-repatch。
+ * 【注入器模式（node，仅应急/迁移用）】默认 no-op（容器启动钩子保留但无操作）：
+ *   node lc_custom.js --strip          剥离 index.html 内联注入块（迁移到浏览器模式时用一次）
+ *   node lc_custom.js --inject-legacy  旧式内联注入（仅 nginx 分发不可用时的应急回退）
  *
  * 目录（9 段）：
  *   [head] hide-badges-2026     隐藏对 Hermes 无效的工具芯片行（纯 CSS）
@@ -17,30 +18,24 @@
  *   [head] effort-selector-2026 🧠 思考程度选择器（点击循环 默认/关/低/中/高）
  *   [body] usage-link-2026c     用量统计悬浮贴签（可拖动，松手吸附左边；/usage/ 面板入口）
  *   [body] version-check-2026   📢 版本更新提示：每60秒查 /picasso-version.txt，有新版弹卡片，
- *                               用户点「立即更新」才刷新（deploy 脚本在容器就绪后写标记文件）；
+ *                               用户点「立即更新」才刷新（deploy 脚本发布时写标记文件）；
  *                               左下角常驻版本徽章，点击随时手动检查/唤出更新卡片
- *   [body] dev-badge-2026       🚧 DEV 环境标识：仅 localhost:3081（SSH 隧道）显示，
+ *   [body] dev-badge-2026       🚧 DEV 环境标识：仅 localhost:3082（SSH 隧道→nginx3082）显示，
  *                               左下角橙色胶囊 + 顶部琥珀色细线；生产（443 端口）永不显示
  *   [body] desktop-pet-2026     🐾 桌面小宠物「小畢」：底部漫游、点击摸摸冒爱心、
  *                               双击睡觉、右键回家（刷新回来）；prefers-reduced-motion 不出场
  *
- * 注入位置：head 五段插在 </head> 前；body 四段插在 </body> 前。
- * 每个目标位置整体包在哨兵注释里，重打时先剥哨兵块再注入，天然幂等。
- * 段落用 String.raw 包裹——反斜杠原样保留（块内 JS 正则不会被转义破坏）；
- * 但仍不要引入反引号 ` 和 ${ 字符，必要时转义。
  * 版本约定：PATCH_VERSION 就是用户所见的版本号——每次改内容 +1；
- * deploy_lc_patches.py 会在容器重启就绪后把它写进 /picasso-version.txt，
- * 所有打开着的旧页面会在 60 秒内弹「有新版本」，用户点更新才刷新。
+ * deploy_lc_patches.py 发布时把它写进 /picasso-version.txt，
+ * 所有打开着的旧页面会在 60 秒内弹「有新版本」，用户点「立即更新」/点徽章才刷新。
+ * 段落用 String.raw 包裹——反斜杠原样保留；仍不要引入反引号 ` 和 ${ 字符，必要时转义。
  * ==========================================================================*/
 'use strict';
-const fs = require('fs');
-
-const INDEX = process.env.LC_INDEX_PATH || '/app/client/dist/index.html';
-const HEAD_SENTINEL = 'lc-custom:head:v1';
-const BODY_SENTINEL = 'lc-custom:body:v1';
-/* 内容版本号：改了任何段落内容就把这个数 +1，部署时才会重新注入。
-   这个数同时是用户在更新弹窗里看到的版本号（deploy 脚本发布时写进 /picasso-version.txt） */
-const PATCH_VERSION = 12;
+var HEAD_SENTINEL = 'lc-custom:head:v1';
+var BODY_SENTINEL = 'lc-custom:body:v1';
+/* 内容版本号：改了任何段落内容就把这个数 +1。它同时是用户在版本徽章/弹窗里看到的版本号。 */
+var PATCH_VERSION = 14;
+var NODE_MODE = (typeof window === 'undefined' || typeof document === 'undefined');
 
 /* 历史 PATCH-MARK —— 每次重打前剥掉，兼容老版本注入块（含本文件旧版） */
 const LEGACY_MARKS = [
@@ -831,7 +826,7 @@ button[data-artifact-trigger]::after{
 </script>` },
   { mark: 'dev-badge-2026', target: 'body', html: String.raw`
 <style>
-/* PATCH-MARK: dev-badge-2026 — DEV 環境標識（僅 localhost:3081 顯示，生產永不顯示） */
+/* PATCH-MARK: dev-badge-2026 — DEV 環境標識（僅 localhost:3082 顯示，生產永不顯示） */
 #lc-devbadge{
   position:fixed;left:12px;bottom:12px;z-index:99998;
   background:linear-gradient(160deg,#f59e0b,#d97706);
@@ -847,9 +842,9 @@ button[data-artifact-trigger]::after{
 }
 </style>
 <script>
-/* PATCH-MARK: dev-badge-2026 — 埠號 3081（SSH 隧道）= Dev 環境才顯示；生產 443 端口不顯示 */
+/* PATCH-MARK: dev-badge-2026 — 埠號 3082（SSH 隧道→nginx3082→Dev容器，與生產同構）= Dev 環境才顯示；生產 443 端口不顯示 */
 (function(){
-  if(location.port !== '3081') return;
+  if(location.port !== '3082') return;
   function mount(){
     if(!document.body) return setTimeout(mount, 300);
     if(document.getElementById('lc-devbadge')) return;
@@ -859,7 +854,7 @@ button[data-artifact-trigger]::after{
     var b=document.createElement('div');
     b.id='lc-devbadge';
     b.textContent='🚧 DEV 環境';
-    b.title='這是開發環境（localhost:3081），隨便折騰都不影響線上用戶';
+    b.title='這是開發環境（localhost:3082），隨便折騰都不影響線上用戶';
     /* 版本徽章（version-check 段，同在左下角、腳本先於本段執行）存在時上移避讓 */
     if(document.getElementById('lc-verpill')) b.style.bottom='44px';
     document.body.appendChild(b);
@@ -924,7 +919,7 @@ button[data-artifact-trigger]::after{
   if(!pet) return;
   if(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   var bubble=document.getElementById('lc-pet-bubble');
-  var WORDS=['在忙嗎？記得喝水 💧','摸魚一下也沒關係～','我今天很乖喔','點點我會開心 ✨','累了就休息一下','你好呀，我是小畢'];
+  var WORDS=['在忙嗎？記得喝水 💧','摸魚一下也沒關係～','我今天很乖喔','點點我會開心 ✨','累了就休息一下','你好呀，我是小畢','升級不停機，就是這麼絲滑 ✨'];
   var sleeping=false, toastTimer=null;
   function clampX(x){ return Math.max(70, Math.min(x, window.innerWidth-70)); }
   function say(t){
@@ -1010,6 +1005,58 @@ function stripMark(html, mark){
   return html.replace(re, '');
 }
 
+/* ============================================================
+ * 浏览器模式：nginx sub_filter 注入的 <script src="/lc_custom.js"> 加载本文件，
+ * 把全部段落的 HTML 挂到 body（style/元素走 innerHTML，script 重建后执行）。
+ * ============================================================ */
+if (!NODE_MODE) {
+  function mountBrowser(){
+    if (!document.body) return setTimeout(mountBrowser, 60);
+    if (document.getElementById('lc-custom-mounted')) return;   /* 幂等 */
+    var frag = SECTIONS.map(function(s){
+      return s.html.replace(/__PATCH_VERSION__/g, String(PATCH_VERSION));
+    }).join('\n');
+    var host = document.createElement('div');
+    host.id = 'lc-custom-mounted';
+    host.style.display = 'none';
+    host.innerHTML = frag;
+    var scripts = [];
+    Array.prototype.forEach.call(host.querySelectorAll('script'), function(s){
+      scripts.push(s.textContent);
+      s.parentNode.removeChild(s);
+    });
+    while (host.firstChild) document.body.appendChild(host.firstChild);
+    scripts.forEach(function(code){
+      var s = document.createElement('script');
+      s.textContent = code;
+      document.body.appendChild(s);
+    });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mountBrowser);
+  else mountBrowser();
+}
+
+/* ============================================================
+ * Node 注入器模式（应急/迁移用，日常发布不走这里）
+ * ============================================================ */
+if (NODE_MODE) {
+const fs = require('fs');
+const INDEX = process.env.LC_INDEX_PATH || '/app/client/dist/index.html';
+
+function stripAll(html){
+  html = html.replace(new RegExp('<!-- ' + HEAD_SENTINEL + ' START -->[\\s\\S]*?<!-- ' + HEAD_SENTINEL + ' END -->\\n?', 'g'), '');
+  html = html.replace(new RegExp('<!-- ' + BODY_SENTINEL + ' START -->[\\s\\S]*?<!-- ' + BODY_SENTINEL + ' END -->\\n?', 'g'), '');
+  html = html.replace(new RegExp('<!-- lc-custom:patch-version:\\d+ -->\\n?', 'g'), '');
+  for (const m of LEGACY_MARKS) html = stripMark(html, m);
+  return html;
+}
+
+function writeIndex(html){
+  const tmp = INDEX + '.lc-custom-tmp';
+  fs.writeFileSync(tmp, html);
+  fs.renameSync(tmp, INDEX);
+}
+
 function main(){
   let html;
   try {
@@ -1017,6 +1064,18 @@ function main(){
   } catch (e) {
     console.error('[lc-custom] cannot read ' + INDEX + ': ' + e.message);
     process.exit(1);
+  }
+
+  /* --strip：只剥离内联注入块（迁移到浏览器模式时用一次），剥完即写回 */
+  if (process.argv.indexOf('--strip') >= 0) {
+    writeIndex(stripAll(html));
+    console.log('[lc-custom] stripped inline blocks — browser mode (/lc_custom.js) takes over');
+    return;
+  }
+  /* 日常默认 no-op（容器启动钩子安全空转）；应急回退需显式 --inject-legacy */
+  if (process.argv.indexOf('--inject-legacy') < 0) {
+    console.log('[lc-custom] injector retired (no-op). Use --strip or --inject-legacy.');
+    return;
   }
 
   /* 0) 快速路径：全部标记齐全 + 哨兵在 + 版本号一致 = 已打过，什么都不做。
@@ -1033,10 +1092,7 @@ function main(){
   }
 
   /* 1) 剥掉哨兵块（本脚本的旧注入）+ 版本戳 + 所有历史标记块 */
-  html = html.replace(new RegExp('<!-- ' + HEAD_SENTINEL + ' START -->[\\s\\S]*?<!-- ' + HEAD_SENTINEL + ' END -->\\n?', 'g'), '');
-  html = html.replace(new RegExp('<!-- ' + BODY_SENTINEL + ' START -->[\\s\\S]*?<!-- ' + BODY_SENTINEL + ' END -->\\n?', 'g'), '');
-  html = html.replace(new RegExp('<!-- lc-custom:patch-version:\\d+ -->\\n?', 'g'), '');
-  for (const m of LEGACY_MARKS) html = stripMark(html, m);
+  html = stripAll(html);
 
   /* 2) 按 target 重新注入（__PATCH_VERSION__ 占位符替换为发布时版本号，
      version-check 段以此知道自己"是哪个版本"） */
@@ -1058,9 +1114,7 @@ function main(){
   html = html.slice(0, bi) + bodyChunk + html.slice(bi);
 
   /* 3) 写回：index.html 可能是 root 属主，用临时文件 + rename（目录可写即可） */
-  const tmp = INDEX + '.lc-custom-tmp';
-  fs.writeFileSync(tmp, html);
-  fs.renameSync(tmp, INDEX);
+  writeIndex(html);
 
   console.log('[lc-custom] injected ' + SECTIONS.length + ' sections (head '
     + SECTIONS.filter(s => s.target === 'head').length + ' + body '
@@ -1070,4 +1124,5 @@ function main(){
 try { main(); } catch (e) {
   console.error('[lc-custom] FAILED: ' + e.message);
   process.exit(1);
+}
 }

@@ -9,12 +9,13 @@ https://47.243.79.144（LibreChat 主界面）+ Hermes Agent + 飞书/微信渠�
 ## 铁律：改动走 Dev，发布挑时机
 
 1. **任何改动先在 Dev 环境验证，再上生产**。Dev 对用户完全不可见（无 nginx 条目、端口只绑本机回环、防火墙未放行）。
-2. Dev = 服务器上的按需环境（Dev Hermes 8643 + Dev LibreChat 3081 + 独立补丁库/数据库/账号体系）：
+2. Dev = 服务器上的按需环境（Dev Hermes 8643 + Dev LibreChat 3081 + nginx 3082 分发层 + 独立补丁库/数据库/账号体系）：
    - 启停（root）：`picasso-dev start`（约 1.1G 内存）／`picasso-dev stop`（**用完必须停**）
-   - 本机访问：`ssh -L 3081:127.0.0.1:3081 root@47.243.79.144` 后开 http://localhost:3081
+   - 本机访问：`ssh -L 3082:127.0.0.1:3082 root@47.243.79.144` 后开 http://localhost:3082（经 nginx3082→容器3081，与生产同构）
    - 详情见《部署清单.md》「Live/Dev 双环境」章节
-3. **UI 补丁**：改 `lc-patches/lc_custom.js` → 把 `PATCH_VERSION` +1 → `python lc-patches/deploy_lc_patches.py --dev` 在 Dev 验证 → 去掉 `--dev` 上生产。发布脚本自动等容器就绪后写版本标记，旧页面 60 秒内弹「有新版本」，用户点「立即更新」才刷新。
-   **改 UI 补丁前 AI 必须自动确保 Dev 在跑**：`ssh root@47.243.79.144 "picasso-dev start"`（deploy --dev 要往容器里打补丁，容器没跑会失败）；部署完提醒用户刷新 http://localhost:3081 查看效果。用户侧等价操作 = 双击仓库根目录 `Dev版-打开.bat`（幂等，已在跑会直接跳到开隧道+浏览器）。
+3. **UI 补丁（零重启发布）**：改 `lc-patches/lc_custom.js`（双模式单文件，浏览器经 nginx `/lc_custom.js` 直接加载）→ 把 `PATCH_VERSION` +1 → `python lc-patches/deploy_lc_patches.py --dev` 在 Dev 验证（隧道 3082 刷新即见，**容器不重启**）→ 去掉 `--dev` 发生产（同样零重启）。发布脚本自动写版本标记，旧页面 60 秒内弹「有新版本」，用户点「立即更新」或点左下角徽章才刷新。
+   **改 UI 补丁前 AI 必须自动确保 Dev 在跑**：`ssh root@47.243.79.144 "picasso-dev start"`（技能索引注入等需要容器在跑）；部署完提醒用户刷新 http://localhost:3082 查看效果。用户侧等价操作 = 双击仓库根目录 `Dev版-打开.bat`（幂等，已在跑会直接跳到开隧道+浏览器）。
+   注意：只有界面补丁是零重启；librechat.yaml/升级容器（`--restart`）和 Hermes 补丁/SOUL（网关重启）仍需低峰执行。
 4. **Hermes 源码补丁**：补丁先 scp 到服务器 `/opt/hermes-patches/` → `hermes-repatch-dev --sync`（派生到 dev 补丁库并重打）→ Dev 验证 → 生产再跑 `hermes-repatch`。注意：升级生产 Hermes 后重建 Dev 必须重跑 `server-tools/fix-dev-paths.sh`（editable pip 安装的路径改写）。
 5. **生产重启（LibreChat 容器 / Hermes 网关）会打断正在使用的用户**——发布时机必须由用户（Henry）决定，默认低峰执行；需要预放时用 `--no-restart` stage。
 6. 上了生产后在本地仓库打 tag：`git tag -a live-YYYYMMDD -m "..." && git push --tags`。

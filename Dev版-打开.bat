@@ -22,13 +22,13 @@ if errorlevel 1 (
 
 echo.
 echo [3/3] Opening tunnel + browser...
-start "picasso-dev-tunnel" ssh -N -L 3081:127.0.0.1:3081 root@47.243.79.144
+start "picasso-dev-tunnel" ssh -N -L 3082:127.0.0.1:3082 root@47.243.79.144
 timeout /t 2 /nobreak >nul
-start http://localhost:3081
+start http://localhost:3082
 
 echo.
 echo ============================================================
-echo   Dev Picasso:   http://localhost:3081
+echo   Dev Picasso:   http://localhost:3082
 echo   When done: double-click Dev-GCLOSE bat to free server RAM
 echo   (keep the picasso-dev-tunnel window open, minimize is fine)
 echo ============================================================
