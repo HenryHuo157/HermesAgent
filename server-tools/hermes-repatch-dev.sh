@@ -20,7 +20,12 @@ if [ "${1:-}" = "--sync" ]; then
   echo "—— 从生产补丁库派生 dev 补丁库 ——"
   mkdir -p "$D"
   for f in /opt/hermes-patches/patch_*.py; do
-    sed 's|/home/admin|/home/dev|g' "$f" > "$D/$(basename "$f")"
+    # 路径派生：admin→dev；共享盘→-dev（占位符防二次后缀）；媒体链接改相对（生产443/Dev3082 各自同源）
+    sed -e 's|/home/admin|/home/dev|g' \
+        -e 's|/srv/hermes-share-dev|__DEVSHARE__|g' \
+        -e 's|/srv/hermes-share|/srv/hermes-share-dev|g' \
+        -e 's|__DEVSHARE__|/srv/hermes-share-dev|g' \
+        -e 's|https://47.243.79.144/m/|/m/|g' "$f" > "$D/$(basename "$f")"
   done
 fi
 
