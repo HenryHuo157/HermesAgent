@@ -12,8 +12,9 @@
 | skills-picker-v7 | `</head>` 前 | 🧩 技能选择器（按钮在定時鍵右侧）+ 白色 Artifact 卡片 |
 | effort-selector-2026 | `</head>` 前 | 🧠 思考程度选择器（默认/关/低/中/高循环） |
 | usage-link-2026c | `</body>` 前 | 左栏用量统计图标 |
-| version-check-2026 | `</body>` 前 | 📢 版本更新提示（弹窗，用户点更新才刷新） |
+| version-check-2026 | `</body>` 前 | 📢 版本更新提示（弹窗，用户点更新才刷新）+ 常驻版本徽章 |
 | dev-badge-2026 | `</body>` 前 | 🚧 DEV 环境标识（仅 localhost:3081 显示，生产永不显示） |
+| desktop-pet-2026 | `</body>` 前 | 🐾 桌面小宠物「小畢」（漫游/摸摸/睡觉/右键回家） |
 
 ## 怎么改、怎么生效
 

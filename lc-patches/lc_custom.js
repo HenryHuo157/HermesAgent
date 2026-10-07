@@ -9,7 +9,7 @@
  * 自动化：docker-compose 把 /opt/lc-patches 挂进容器，启动命令先跑本文件再起后端，
  *         所以升级/重建容器后界面定制自动恢复，不再依赖记得手动跑 lc-repatch。
  *
- * 目录（8 段）：
+ * 目录（9 段）：
  *   [head] hide-badges-2026     隐藏对 Hermes 无效的工具芯片行（纯 CSS）
  *   [head] tasks-panel-2026     ⏰ 定時任務面板 + 定時按钮
  *   [head] think-ui-2026b       思考块浅色小字、结束后自动收起（ZCode 风格，取代 thinking-style/working-verbs）
@@ -17,11 +17,14 @@
  *   [head] effort-selector-2026 🧠 思考程度选择器（点击循环 默认/关/低/中/高）
  *   [body] usage-link-2026c     用量统计悬浮贴签（可拖动，松手吸附左边；/usage/ 面板入口）
  *   [body] version-check-2026   📢 版本更新提示：每60秒查 /picasso-version.txt，有新版弹卡片，
- *                               用户点「立即更新」才刷新（deploy 脚本在容器就绪后写标记文件）
+ *                               用户点「立即更新」才刷新（deploy 脚本在容器就绪后写标记文件）；
+ *                               左下角常驻版本徽章，点击随时手动检查/唤出更新卡片
  *   [body] dev-badge-2026       🚧 DEV 环境标识：仅 localhost:3081（SSH 隧道）显示，
  *                               左下角橙色胶囊 + 顶部琥珀色细线；生产（443 端口）永不显示
+ *   [body] desktop-pet-2026     🐾 桌面小宠物「小畢」：底部漫游、点击摸摸冒爱心、
+ *                               双击睡觉、右键回家（刷新回来）；prefers-reduced-motion 不出场
  *
- * 注入位置：head 五段插在 </head> 前；body 两段插在 </body> 前。
+ * 注入位置：head 五段插在 </head> 前；body 四段插在 </body> 前。
  * 每个目标位置整体包在哨兵注释里，重打时先剥哨兵块再注入，天然幂等。
  * 段落用 String.raw 包裹——反斜杠原样保留（块内 JS 正则不会被转义破坏）；
  * 但仍不要引入反引号 ` 和 ${ 字符，必要时转义。
@@ -37,7 +40,7 @@ const HEAD_SENTINEL = 'lc-custom:head:v1';
 const BODY_SENTINEL = 'lc-custom:body:v1';
 /* 内容版本号：改了任何段落内容就把这个数 +1，部署时才会重新注入。
    这个数同时是用户在更新弹窗里看到的版本号（deploy 脚本发布时写进 /picasso-version.txt） */
-const PATCH_VERSION = 11;
+const PATCH_VERSION = 12;
 
 /* 历史 PATCH-MARK —— 每次重打前剥掉，兼容老版本注入块（含本文件旧版） */
 const LEGACY_MARKS = [
@@ -862,6 +865,134 @@ button[data-artifact-trigger]::after{
     document.body.appendChild(b);
   }
   mount();
+})();
+</script>` },
+  { mark: 'desktop-pet-2026', target: 'body', html: String.raw`
+<style>
+/* PATCH-MARK: desktop-pet-2026 — 桌面小寵物「小畢」：底部漫遊、點擊摸摸、雙擊睡覺、右鍵回家 */
+#lc-pet{position:fixed;bottom:8px;left:220px;z-index:99990;width:48px;height:42px;
+  cursor:pointer;transition:left 1.1s cubic-bezier(.45,.05,.55,.95);
+  user-select:none;-webkit-user-select:none;filter:drop-shadow(0 3px 4px rgba(30,27,75,.3));}
+#lc-pet-body{position:absolute;left:2px;right:2px;bottom:2px;height:36px;
+  background:linear-gradient(160deg,#818cf8,#4f46e5);
+  border-radius:46% 46% 44% 44%/60% 60% 42% 42%;
+  box-shadow:inset -4px -5px 0 rgba(30,27,75,.22);
+  transform-origin:50% 100%;transition:transform .3s;}
+#lc-pet.hopping #lc-pet-body{animation:pet-squash 1.15s ease;}
+#lc-pet.love #lc-pet-body{animation:pet-jump .55s ease;}
+@keyframes pet-squash{0%{transform:scaleY(.82) scaleX(1.12)}30%{transform:translateY(-10px) scaleY(1.06) scaleX(.96)}60%{transform:translateY(0) scaleY(.94) scaleX(1.04)}100%{transform:none}}
+@keyframes pet-jump{0%{transform:none}35%{transform:translateY(-16px) rotate(-6deg)}70%{transform:translateY(0) scaleY(.85) scaleX(1.1)}100%{transform:none}}
+.pet-eye{position:absolute;top:12px;width:9px;height:10px;background:#fff;border-radius:50%;}
+.pet-eye.l{left:9px}.pet-eye.r{right:9px}
+.pet-pupil{position:absolute;left:2.5px;top:3px;width:4.5px;height:4.5px;background:#1e1b4b;border-radius:50%;transition:transform .15s;}
+#lc-pet.facing-r .pet-pupil{transform:translateX(1.5px)}
+#lc-pet.facing-l .pet-pupil{transform:translateX(-1.5px)}
+#lc-pet.sleeping .pet-eye{height:2.5px;top:16px;border-radius:2px;}
+#lc-pet.sleeping .pet-pupil{opacity:0}
+#lc-pet.sleeping #lc-pet-body{opacity:.85}
+.pet-mouth{position:absolute;left:50%;top:24px;width:8px;height:4px;margin-left:-4px;
+  border-bottom:2px solid #312e81;border-radius:0 0 8px 8px;}
+.pet-cheek{position:absolute;top:19px;width:6px;height:3.5px;background:rgba(244,114,182,.75);border-radius:50%;}
+.pet-cheek.l{left:5px}.pet-cheek.r{right:5px}
+#lc-pet-bubble{position:absolute;left:50%;bottom:50px;transform:translateX(-50%);
+  background:#fff;color:#1f2328;border:1px solid #d5d9e0;border-radius:10px;
+  padding:5px 9px;font-size:11.5px;white-space:nowrap;display:none;
+  box-shadow:0 4px 14px rgba(15,23,42,.15);}
+#lc-pet-bubble:after{content:'';position:absolute;left:50%;bottom:-5px;margin-left:-5px;
+  border:5px solid transparent;border-top-color:#fff;border-bottom:none;}
+@media (prefers-color-scheme: dark){ #lc-pet-bubble{background:#161a22;color:#e6eaf2;border-color:#2a2f3a;} }
+.pet-heart{position:fixed;z-index:99991;font-size:13px;pointer-events:none;animation:pet-float 1.2s ease forwards;}
+@keyframes pet-float{0%{opacity:0;transform:translateY(0) scale(.6)}20%{opacity:1}100%{opacity:0;transform:translateY(-46px) scale(1.15)}}
+#lc-pet-toast{position:fixed;left:50%;bottom:70px;transform:translateX(-50%);z-index:99999;
+  background:rgba(30,35,45,.92);color:#fff;font-size:12.5px;padding:8px 16px;border-radius:10px;
+  display:none;box-shadow:0 6px 20px rgba(0,0,0,.25);}
+</style>
+<div id="lc-pet" title="小畢 — 點我摸摸｜雙擊睡覺｜右鍵回家">
+  <div id="lc-pet-body">
+    <div class="pet-eye l"><div class="pet-pupil"></div></div>
+    <div class="pet-eye r"><div class="pet-pupil"></div></div>
+    <div class="pet-mouth"></div>
+    <div class="pet-cheek l"></div><div class="pet-cheek r"></div>
+  </div>
+  <div id="lc-pet-bubble"></div>
+</div>
+<div id="lc-pet-toast"></div>
+<script>
+/* PATCH-MARK: desktop-pet-2026 — 漫遊循環：隨機跳/說話/打盹；互動見 title。減少動效用戶不出場 */
+(function(){
+  var pet=document.getElementById('lc-pet');
+  if(!pet) return;
+  if(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  var bubble=document.getElementById('lc-pet-bubble');
+  var WORDS=['在忙嗎？記得喝水 💧','摸魚一下也沒關係～','我今天很乖喔','點點我會開心 ✨','累了就休息一下','你好呀，我是小畢'];
+  var sleeping=false, toastTimer=null;
+  function clampX(x){ return Math.max(70, Math.min(x, window.innerWidth-70)); }
+  function say(t){
+    bubble.textContent=t; bubble.style.display='block';
+    setTimeout(function(){ bubble.style.display='none'; }, 2600);
+  }
+  function hearts(n){
+    var r=pet.getBoundingClientRect();
+    for(var i=0;i<n;i++){
+      var s=document.createElement('span');
+      s.className='pet-heart';
+      s.textContent=(i%2===0)?'❤️':'✨';
+      s.style.left=(r.left+r.width/2+(Math.random()*30-15))+'px';
+      s.style.top=(r.top-4)+'px';
+      document.body.appendChild(s);
+      (function(el){ setTimeout(function(){ el.remove(); }, 1250); })(s);
+    }
+  }
+  function hop(){
+    if(sleeping) return;
+    var from=pet.getBoundingClientRect().left;
+    var to=clampX(80+Math.random()*(window.innerWidth-160));
+    pet.classList.add('hopping');
+    pet.style.left=to+'px';
+    pet.classList.toggle('facing-r', to>from);
+    pet.classList.toggle('facing-l', to<from);
+    setTimeout(function(){ pet.classList.remove('hopping'); }, 1200);
+  }
+  function nap(){
+    sleeping=true; pet.classList.add('sleeping'); say('zZZ…');
+    setTimeout(function(){ sleeping=false; pet.classList.remove('sleeping'); }, 5000+Math.random()*3000);
+  }
+  function loop(){
+    var wait=1800+Math.random()*3200;
+    setTimeout(function(){
+      if(sleeping){ loop(); return; }
+      var roll=Math.random();
+      if(roll<0.62) hop();
+      else if(roll<0.78) say(WORDS[Math.floor(Math.random()*WORDS.length)]);
+      else nap();
+      loop();
+    }, wait);
+  }
+  pet.addEventListener('click', function(){
+    if(sleeping){ sleeping=false; pet.classList.remove('sleeping'); say('嗯…我醒了'); return; }
+    pet.classList.add('love');
+    hearts(3);
+    setTimeout(function(){ pet.classList.remove('love'); }, 560);
+  });
+  pet.addEventListener('dblclick', function(){
+    sleeping=!sleeping;
+    pet.classList.toggle('sleeping', sleeping);
+    say(sleeping?'zZZ…':'精神滿滿！');
+  });
+  pet.addEventListener('contextmenu', function(e){
+    e.preventDefault();
+    pet.style.display='none';
+    var t=document.getElementById('lc-pet-toast');
+    t.textContent='小畢回家啦～重新整理頁面牠就回來';
+    t.style.display='block';
+    clearTimeout(toastTimer);
+    toastTimer=setTimeout(function(){ t.style.display='none'; }, 2600);
+  });
+  window.addEventListener('resize', function(){
+    var x=parseFloat(pet.style.left);
+    if(!isNaN(x)) pet.style.left=clampX(x)+'px';
+  });
+  loop();
 })();
 </script>` }
 ];
