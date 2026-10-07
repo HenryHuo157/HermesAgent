@@ -28,7 +28,7 @@ python deploy_lc_patches.py --dev      # 推 Dev（librechat-dev-api，端口 30
 容器里 LibreChat 启动时会缓存 index.html，所以改动必须重启容器才可见——
 容器启动命令里带了自动补丁钩子，重启即重打，不用担心。
 
-### 版本更新弹窗（version-check-2026）
+### 版本更新弹窗 + 常驻版本徽章（version-check-2026）
 
 `PATCH_VERSION` 同时是**用户所见的版本号**。正常发布（重启路径）会等容器就绪后把版本号写进
 容器 `/app/client/dist/picasso-version.txt`（免认证静态文件，Dev/生产通用）；
@@ -36,6 +36,10 @@ python deploy_lc_patches.py --dev      # 推 Dev（librechat-dev-api，端口 30
 
 - **立即更新** = `location.reload()`（刷新拿新版）
 - **稍後** = 静默 1 小时（localStorage `lc-update-snooze`），期内刷新/重开页面都不再弹
+
+**左下角常驻版本徽章**：平时低调显示当前版本号（如 `v11`），有更新时变橙色显示
+`v11 ↑ v12`；**点击徽章随时手动检查并唤出更新卡片（无视「稍後」静默）**——
+弹窗被关掉后想更新，点它就行。无更新时点击显示「✓ 已是最新」。
 
 `--no-restart` 只 stage 补丁、**不写版本标记**——旧页面不会收到提示（防止提示了刷新却拿不到新版）；
 注意若容器因其他原因重启，staged 版本会自动激活。首次从无标记状态发布后，

@@ -37,7 +37,7 @@ const HEAD_SENTINEL = 'lc-custom:head:v1';
 const BODY_SENTINEL = 'lc-custom:body:v1';
 /* 内容版本号：改了任何段落内容就把这个数 +1，部署时才会重新注入。
    这个数同时是用户在更新弹窗里看到的版本号（deploy 脚本发布时写进 /picasso-version.txt） */
-const PATCH_VERSION = 10;
+const PATCH_VERSION = 11;
 
 /* 历史 PATCH-MARK —— 每次重打前剥掉，兼容老版本注入块（含本文件旧版） */
 const LEGACY_MARKS = [
@@ -724,7 +724,20 @@ button[data-artifact-trigger]::after{
 </script>` },
   { mark: 'version-check-2026', target: 'body', html: String.raw`
 <style>
-/* PATCH-MARK: version-check-2026 — 版本更新提示卡片（用戶點「立即更新」才刷新） */
+/* PATCH-MARK: version-check-2026 — 版本更新提示卡片 + 常駐版本徽章（用戶點「立即更新」才刷新） */
+#lc-verpill{
+  position:fixed;left:12px;bottom:12px;z-index:99997;
+  background:rgba(30,35,45,.78);color:#cbd5e1;
+  font-size:11px;font-weight:600;letter-spacing:.3px;
+  padding:3px 10px;border-radius:999px;cursor:pointer;
+  user-select:none;-webkit-user-select:none;
+  transition:background .2s,color .2s;
+}
+#lc-verpill:hover{background:rgba(30,35,45,.95);}
+#lc-verpill.lc-ver-up{
+  background:linear-gradient(160deg,#f59e0b,#d97706);
+  color:#fff;box-shadow:0 2px 10px rgba(217,119,6,.4);
+}
 #lc-updatecard{
   position:fixed;right:20px;bottom:20px;z-index:99999;display:none;
   width:280px;background:#fff;border:1px solid #d5d9e0;border-radius:14px;
@@ -743,10 +756,21 @@ button[data-artifact-trigger]::after{
 <script>
 /* PATCH-MARK: version-check-2026 — 每60秒查 /picasso-version.txt（容器 dist 静态文件，
    deploy 脚本在重启就绪后才写入），发现比本页版本新就弹卡片；點「立即更新」才 reload，
-   「稍後」靜默 1 小時。MINE 由注入器替换为发布时的 PATCH_VERSION。 */
+   「稍後」靜默 1 小時。左下角常駐版本徽章：平時顯示當前版本號，有更新變橙色，
+   點擊隨時手動檢查/喚出更新卡片（不受「稍後」靜默影響）。MINE 由注入器替换。 */
 (function(){
   var MINE=__PATCH_VERSION__, KEY='lc-update-snooze';
-  var card=null;
+  var card=null, pill=null, LATEST=MINE;
+  function fmtPill(){
+    if(LATEST>MINE){
+      pill.textContent='v'+MINE+' ↑ v'+LATEST;
+      pill.classList.add('lc-ver-up');
+      pill.title='有新版本 v'+LATEST+'！點擊更新';
+    }else{
+      pill.textContent='v'+MINE;
+      pill.title='當前版本 v'+MINE+'，點擊檢查更新';
+    }
+  }
   function show(){
     if(card){ card.style.display='block'; return; }
     card=document.createElement('div');
@@ -765,20 +789,41 @@ button[data-artifact-trigger]::after{
     };
     card.style.display='block';
   }
-  function check(){
+  function check(fromUser){
     fetch('/picasso-version.txt?ts='+Date.now(), {cache:'no-store'})
       .then(function(r){ return r.ok ? r.text() : ''; })
       .then(function(t){
         var v=parseInt((t||'').trim(),10);
-        if(isNaN(v) || v<=MINE) return;
+        if(!isNaN(v)) LATEST=v;
+        fmtPill();
+        if(isNaN(v) || v<=MINE){
+          if(fromUser){
+            pill.textContent='✓ 已是最新';
+            setTimeout(fmtPill, 1500);
+          }
+          return;
+        }
+        if(fromUser){ show(); return; }   /* 手動點徽章：無視「稍後」靜默 */
         var snooze=0;
         try{ snooze=parseInt(localStorage.getItem(KEY),10)||0; }catch(e){}
         if(Date.now()<snooze) return;
         show();
       })
-      .catch(function(){});
+      .catch(function(){ if(fromUser){ pill.textContent='✓ 已是最新'; setTimeout(fmtPill, 1500); } });
   }
-  if(MINE>0){ check(); setInterval(check, 60000); }
+  function mount(){
+    if(!document.body) return setTimeout(mount, 300);
+    if(!pill){
+      pill=document.createElement('div');
+      pill.id='lc-verpill';
+      pill.onclick=function(){ check(true); };
+      document.body.appendChild(pill);
+      fmtPill();
+      check(false);
+      setInterval(function(){ check(false); }, 60000);
+    }
+  }
+  if(MINE>0){ mount(); }
 })();
 </script>` },
   { mark: 'dev-badge-2026', target: 'body', html: String.raw`
@@ -812,6 +857,8 @@ button[data-artifact-trigger]::after{
     b.id='lc-devbadge';
     b.textContent='🚧 DEV 環境';
     b.title='這是開發環境（localhost:3081），隨便折騰都不影響線上用戶';
+    /* 版本徽章（version-check 段，同在左下角、腳本先於本段執行）存在時上移避讓 */
+    if(document.getElementById('lc-verpill')) b.style.bottom='44px';
     document.body.appendChild(b);
   }
   mount();
