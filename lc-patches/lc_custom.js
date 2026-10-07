@@ -10,7 +10,7 @@
  *   node lc_custom.js --strip          剥离 index.html 内联注入块（迁移到浏览器模式时用一次）
  *   node lc_custom.js --inject-legacy  旧式内联注入（仅 nginx 分发不可用时的应急回退）
  *
- * 目录（10 段）：
+ * 目录（11 段）：
  *   [head] hide-badges-2026     隐藏对 Hermes 无效的工具芯片行（纯 CSS）
  *   [head] tasks-panel-2026     ⏰ 定時任務面板 + 定時按钮
  *   [head] think-ui-2026b       思考块浅色小字、结束后自动收起（ZCode 风格，取代 thinking-style/working-verbs）
@@ -25,6 +25,7 @@
  *   [body] desktop-pet-2026     🐾 桌面小宠物「小畢」：底部漫游、点击摸摸冒爱心、
  *                               双击睡觉、右键回家（刷新回来）；prefers-reduced-motion 不出场
  *   [body] theme-toggle-2026    ☀️/🌙 应用内明暗切换（登录页用原生按钮；读写 color-theme）
+ *   [body] login-brand-2026     ✨ 登录/注册封面品牌字「Picasso AI」（logo 正下方，渐变字）
  *
  * 版本约定：PATCH_VERSION 就是用户所见的版本号——每次改内容 +1；
  * deploy_lc_patches.py 发布时把它写进 /picasso-version.txt，
@@ -35,7 +36,7 @@
 var HEAD_SENTINEL = 'lc-custom:head:v1';
 var BODY_SENTINEL = 'lc-custom:body:v1';
 /* 内容版本号：改了任何段落内容就把这个数 +1。它同时是用户在版本徽章/弹窗里看到的版本号。 */
-var PATCH_VERSION = 17;
+var PATCH_VERSION = 18;
 var NODE_MODE = (typeof window === 'undefined' || typeof document === 'undefined');
 
 /* 历史 PATCH-MARK —— 每次重打前剥掉，兼容老版本注入块（含本文件旧版） */
@@ -1030,6 +1031,39 @@ button[data-artifact-trigger]::after{
     b.textContent = (localStorage.getItem('color-theme')||'light').indexOf('dark') >= 0 ? '☀️' : '🌙';
   }
   setInterval(ensure, 1000);
+  ensure();
+})();
+</script>` },
+  { mark: 'login-brand-2026', target: 'body', html: String.raw`
+<style>
+/* PATCH-MARK: login-brand-2026 — 登录/注册封面品牌字：logo 正下方渐变 Picasso AI */
+#lc-brand{
+  text-align:center;
+  font-size:30px; font-weight:800; letter-spacing:.5px;
+  margin-top:4px;
+  background:linear-gradient(120deg,#6366f1,#a855f7 55%,#ec4899);
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+  user-select:none;
+}
+</style>
+<script>
+/* PATCH-MARK: login-brand-2026 — 巡检挂载：auth 页（assets/logo.svg 在场）logo 下方插品牌字，SPA 跳转自动跟随 */
+(function(){
+  function ensure(){
+    var logo = document.querySelector('img[src="assets/logo.svg"]') ||
+               document.querySelector('img[alt*="标识"]') ||
+               document.querySelector('img[alt*="標識"]');
+    if(!logo) return;
+    var holder = logo.closest('div');
+    if(!holder || !holder.parentElement) return;
+    if(document.getElementById('lc-brand')) return;
+    var b = document.createElement('div');
+    b.id = 'lc-brand';
+    b.textContent = 'Picasso AI';
+    holder.parentElement.insertBefore(b, holder.nextSibling);
+  }
+  setInterval(ensure, 900);
+  document.addEventListener('DOMContentLoaded', ensure);
   ensure();
 })();
 </script>` }
