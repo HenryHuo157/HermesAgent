@@ -19,9 +19,9 @@
  *   [body] usage-link-2026c     用量统计悬浮贴签（可拖动，松手吸附左边；/usage/ 面板入口）
  *   [body] version-check-2026   📢 版本更新提示：每60秒查 /picasso-version.txt，有新版弹卡片，
  *                               用户点「立即更新」才刷新（deploy 脚本发布时写标记文件）；
- *                               左下角常驻版本徽章，点击随时手动检查/唤出更新卡片
+ *                               右下角常驻版本徽章，点击随时手动检查/唤出更新卡片
  *   [body] dev-badge-2026       🚧 DEV 环境标识：仅 localhost:3082（SSH 隧道→nginx3082）显示，
- *                               左下角橙色胶囊 + 顶部琥珀色细线；生产（443 端口）永不显示
+ *                               右下角橙色胶囊（叠在版本徽章上方） + 顶部琥珀色细线；生产（443 端口）永不显示
  *   [body] desktop-pet-2026     🐾 桌面小宠物「小畢」：底部漫游、点击摸摸冒爱心、
  *                               双击睡觉、右键回家（刷新回来）；prefers-reduced-motion 不出场
  *
@@ -34,7 +34,7 @@
 var HEAD_SENTINEL = 'lc-custom:head:v1';
 var BODY_SENTINEL = 'lc-custom:body:v1';
 /* 内容版本号：改了任何段落内容就把这个数 +1。它同时是用户在版本徽章/弹窗里看到的版本号。 */
-var PATCH_VERSION = 14;
+var PATCH_VERSION = 15;
 var NODE_MODE = (typeof window === 'undefined' || typeof document === 'undefined');
 
 /* 历史 PATCH-MARK —— 每次重打前剥掉，兼容老版本注入块（含本文件旧版） */
@@ -724,7 +724,7 @@ button[data-artifact-trigger]::after{
 <style>
 /* PATCH-MARK: version-check-2026 — 版本更新提示卡片 + 常駐版本徽章（用戶點「立即更新」才刷新） */
 #lc-verpill{
-  position:fixed;left:12px;bottom:12px;z-index:99997;
+  position:fixed;right:12px;bottom:12px;z-index:99997;
   background:rgba(30,35,45,.78);color:#cbd5e1;
   font-size:11px;font-weight:600;letter-spacing:.3px;
   padding:3px 10px;border-radius:999px;cursor:pointer;
@@ -737,7 +737,7 @@ button[data-artifact-trigger]::after{
   color:#fff;box-shadow:0 2px 10px rgba(217,119,6,.4);
 }
 #lc-updatecard{
-  position:fixed;right:20px;bottom:20px;z-index:99999;display:none;
+  position:fixed;right:20px;bottom:80px;z-index:99999;display:none;
   width:280px;background:#fff;border:1px solid #d5d9e0;border-radius:14px;
   box-shadow:0 12px 40px rgba(15,23,42,.22);
   padding:16px 18px;color:#1f2328;font-size:13px;line-height:1.5;
@@ -754,7 +754,7 @@ button[data-artifact-trigger]::after{
 <script>
 /* PATCH-MARK: version-check-2026 — 每60秒查 /picasso-version.txt（容器 dist 静态文件，
    deploy 脚本在重启就绪后才写入），发现比本页版本新就弹卡片；點「立即更新」才 reload，
-   「稍後」靜默 1 小時。左下角常駐版本徽章：平時顯示當前版本號，有更新變橙色，
+   「稍後」靜默 1 小時。右下角常駐版本徽章：平時顯示當前版本號，有更新變橙色，
    點擊隨時手動檢查/喚出更新卡片（不受「稍後」靜默影響）。MINE 由注入器替换。 */
 (function(){
   var MINE=__PATCH_VERSION__, KEY='lc-update-snooze';
@@ -828,7 +828,7 @@ button[data-artifact-trigger]::after{
 <style>
 /* PATCH-MARK: dev-badge-2026 — DEV 環境標識（僅 localhost:3082 顯示，生產永不顯示） */
 #lc-devbadge{
-  position:fixed;left:12px;bottom:12px;z-index:99998;
+  position:fixed;right:12px;bottom:44px;z-index:99998;
   background:linear-gradient(160deg,#f59e0b,#d97706);
   color:#fff;font-size:12px;font-weight:700;letter-spacing:.5px;
   padding:5px 14px;border-radius:999px;
@@ -855,8 +855,7 @@ button[data-artifact-trigger]::after{
     b.id='lc-devbadge';
     b.textContent='🚧 DEV 環境';
     b.title='這是開發環境（localhost:3082），隨便折騰都不影響線上用戶';
-    /* 版本徽章（version-check 段，同在左下角、腳本先於本段執行）存在時上移避讓 */
-    if(document.getElementById('lc-verpill')) b.style.bottom='44px';
+    /* 版本徽章固定在右下 12px（version-check 段樣式），本徽章疊在其上方（樣式默認 bottom:44px） */
     document.body.appendChild(b);
   }
   mount();
