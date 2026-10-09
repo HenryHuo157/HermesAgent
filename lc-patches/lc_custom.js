@@ -26,6 +26,12 @@
  *                               双击睡觉、右键回家（刷新回来）；prefers-reduced-motion 不出场
  *   [body] theme-toggle-2026    ☀️/🌙 应用内明暗切换（登录页用原生按钮；读写 color-theme）
  *   [body] login-brand-2026     ✨ 登录/注册封面品牌字「Picasso AI」（logo 正下方，渐变字）
+ *   [body] initial-pw-notice-2026 ⚠️ 初始密码未修改提醒：users.mustChangePassword 标记(建号时打，
+ *                               /pw/ 改密成功即清除)，仍带标记的用户在输入框下方显示
+ *                               黄色提醒条，「立即修改」跳 /pw/，30 秒轮询改完自动消失
+ *   [body] default-model-2026   🎯 新用户默认选中 Hermes/hermes-agent：裸 /c/new 且从没
+ *                               手动选过模型(lastSelectedModel 为空)时，自动带
+ *                               ?endpoint=&model=hermes-agent 参数进入，不用手动选
  *
  * 版本约定：PATCH_VERSION 就是用户所见的版本号——每次改内容 +1；
  * deploy_lc_patches.py 发布时把它写进 /picasso-version.txt，
@@ -36,7 +42,7 @@
 var HEAD_SENTINEL = 'lc-custom:head:v1';
 var BODY_SENTINEL = 'lc-custom:body:v1';
 /* 内容版本号：改了任何段落内容就把这个数 +1。它同时是用户在版本徽章/弹窗里看到的版本号。 */
-var PATCH_VERSION = 18;
+var PATCH_VERSION = 24;
 var NODE_MODE = (typeof window === 'undefined' || typeof document === 'undefined');
 
 /* 历史 PATCH-MARK —— 每次重打前剥掉，兼容老版本注入块（含本文件旧版） */
@@ -1065,6 +1071,125 @@ button[data-artifact-trigger]::after{
   setInterval(ensure, 900);
   document.addEventListener('DOMContentLoaded', ensure);
   ensure();
+})();
+</script>` },
+  { mark: 'initial-pw-notice-2026', target: 'body', html: String.raw`
+<style>
+/* PATCH-MARK: initial-pw-notice-2026 — 初始密碼未修改提醒（輸入框下方黃條） */
+#lc-pwnote{
+  display:none;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center;
+  width:100%;margin:10px 0 0;padding:10px 16px;
+  border:1px solid #f2c76e;background:#fff8ec;border-radius:12px;
+  color:#7a4d06;font-size:13.5px;line-height:1.5;box-sizing:border-box;
+}
+html.dark #lc-pwnote{background:rgba(245,158,11,.12);border-color:rgba(245,158,11,.45);color:#fcd34d;}
+#lc-pwnote .lc-pw-btn{
+  border:none;border-radius:8px;background:#f59e0b;color:#fff;
+  font-size:12.5px;font-weight:600;padding:6px 14px;cursor:pointer;white-space:nowrap;
+}
+#lc-pwnote .lc-pw-btn:hover{background:#d97706;}
+</style>
+<div id="lc-pwnote">
+  <span>⚠️ 你仍在使用<b>初始密碼</b>，為了帳號安全，請盡快修改密碼。</span>
+  <button class="lc-pw-btn" type="button">立即修改</button>
+</div>
+<script>
+(function(){
+  var note=document.getElementById('lc-pwnote');
+  if(!note) return;
+  var btn=note.querySelector('.lc-pw-btn');
+  btn.addEventListener('click',function(){ window.open(location.origin+'/pw/','_blank'); });
+  var showing=false;
+  var EMAIL_KEY='lc-user-email';
+
+  /* 把提醒條插到聊天輸入框 form 正下方（SPA 路由切換後 form 會重建，需重插）。
+     返回是否找到了輸入框（登入頁沒有 textarea form → false，提醒條保持隱藏） */
+  function place(){
+    var forms=document.querySelectorAll('form'), form=null;
+    for(var i=0;i<forms.length;i++){
+      if(forms[i].querySelector('textarea')){ form=forms[i]; break; }
+    }
+    if(!form) return false;
+    if(note.previousElementSibling!==form){
+      form.insertAdjacentElement('afterend', note);
+    }
+    return true;
+  }
+  /* 記錄登入郵箱：捕獲階段監聽全頁點擊/回車，頁面上存在登錄表單（含密碼框）
+     時就抓當前郵箱值寫入 localStorage。不能用 submit 事件（登錄按鈕 type=button，
+     原生 submit 不觸發）；也絕不碰認證 API（v0.8.8 的 refresh 端點是輪換式，
+     補丁調用會頂掉 SPA 自己的憑據導致登出）。 */
+  function grabLoginEmail(){
+    var forms=document.querySelectorAll('form');
+    for(var i=0;i<forms.length;i++){
+      var pw=forms[i].querySelector('input[type="password"]');
+      if(!pw) continue;
+      var em=forms[i].querySelector('input[name="email"]');
+      var v=em && em.value ? em.value.trim().toLowerCase() : '';
+      if(v.indexOf('@')>0){
+        try{ localStorage.setItem(EMAIL_KEY, v); }catch(e){}
+      }
+    }
+  }
+  document.addEventListener('click', grabLoginEmail, true);
+  document.addEventListener('keydown', function(e){ if(e.key==='Enter') grabLoginEmail(); }, true);
+
+  /* 持續輪詢：帶標記→顯示（30s 復查）；不帶→隱藏（60s 復查，帳號切換後能自動恢復） */
+  function check(){
+    var email=null;
+    try{ email=localStorage.getItem(EMAIL_KEY); }catch(e){}
+    if(!email){
+      showing=false; note.style.display='none';
+      setTimeout(check, 5000);
+      return;
+    }
+    fetch('/pw/api/must-change?email='+encodeURIComponent(email))
+      .then(function(r){ return r.json(); })
+      .then(function(dd){
+        if(dd && dd.mustChange){
+          if(place()){
+            showing=true;
+            note.style.display='flex';
+          }else{
+            showing=false; note.style.display='none';
+          }
+          setTimeout(check, 30000);
+        }else{
+          showing=false; note.style.display='none';
+          setTimeout(check, 60000);
+        }
+      })
+      .catch(function(){ setTimeout(check, 15000); });
+  }
+  var lastPlace=0;
+  new MutationObserver(function(){
+    if(!showing) return;
+    var now=Date.now();
+    if(now-lastPlace<800) return;
+    lastPlace=now;
+    if(!place()) note.style.display='none';
+    else note.style.display='flex';
+  }).observe(document.body, {childList:true, subtree:true});
+  check();
+})();
+</script>` },
+  { mark: 'default-model-2026', target: 'body', html: String.raw`
+<script>
+/* PATCH-MARK: default-model-2026 — 新用戶默認選中 Hermes/hermes-agent，免手動選 */
+(function(){
+  var EP = location.port === '3082' ? 'Hermes Dev' : 'Hermes';
+  function go(){
+    if(location.pathname.indexOf('/c/new') !== 0 || location.search.length > 1){
+      setTimeout(go, 2000);
+      return;
+    }
+    var m=null;
+    try{ m=localStorage.getItem('lastSelectedModel'); }catch(e){}
+    if(m && m !== '{}' && m !== 'null'){ return; }  /* 用戶真選過模型才尊重；'{}' 是 SPA 初始化空值 */
+    location.replace('/c/new?endpoint='+encodeURIComponent(EP)+'&model=hermes-agent');
+  }
+  if(!document.body) document.addEventListener('DOMContentLoaded', go);
+  else go();
 })();
 </script>` }
 ];
