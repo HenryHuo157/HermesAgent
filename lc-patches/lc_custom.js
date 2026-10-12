@@ -47,7 +47,7 @@
 var HEAD_SENTINEL = 'lc-custom:head:v1';
 var BODY_SENTINEL = 'lc-custom:body:v1';
 /* 内容版本号：改了任何段落内容就把这个数 +1。它同时是用户在版本徽章/弹窗里看到的版本号。 */
-var PATCH_VERSION = '1.1.35';  /* 语义化版本:最后一位随补丁发布递增(1.1.34→1.1.35) */
+var PATCH_VERSION = '1.1.36';  /* 语义化版本:最后一位随补丁发布递增(1.1.34→1.1.35) */
 var NODE_MODE = (typeof window === 'undefined' || typeof document === 'undefined');
 
 /* 历史 PATCH-MARK —— 每次重打前剥掉，兼容老版本注入块（含本文件旧版） */
@@ -1322,7 +1322,7 @@ html.dark #lc-pwnote{background:rgba(245,158,11,.12);border-color:rgba(245,158,1
       li.setAttribute('tabindex','-1');
       li.textContent='🗑️ 注销账户…';
       li.style.cssText='display:flex;align-items:center;padding:8px 12px;cursor:pointer;font-size:13.5px;border-radius:6px;margin:2px 6px;';
-      (logoutItem.parentElement === menu ? menu : logoutItem.parentElement).insertBefore(li, logoutItem.nextSibling);
+      (logoutItem.parentElement === menu ? menu : logoutItem.parentElement).insertBefore(li, logoutItem);
       li.addEventListener('click', function(e){
         e.stopPropagation();
         e.preventDefault();
