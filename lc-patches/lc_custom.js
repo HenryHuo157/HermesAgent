@@ -32,6 +32,9 @@
  *   [body] default-model-2026   🎯 新用户默认选中 Hermes/hermes-agent：裸 /c/new 且从没
  *                               手动选过模型(lastSelectedModel 为空)时，自动带
  *                               ?endpoint=&model=hermes-agent 参数进入，不用手动选
+ *   [body] delete-account-2026  🗑️ 注销账户：头像菜单「注销」下追加红色「注销账户…」，
+ *                               弹确认框(需输入登录邮箱才能确认)，调官方
+ *                               DELETE /api/user/delete 级联删除账户全部数据后跳登录页
  *
  * 版本约定：PATCH_VERSION 就是用户所见的版本号——每次改内容 +1；
  * deploy_lc_patches.py 发布时把它写进 /picasso-version.txt，
@@ -42,7 +45,7 @@
 var HEAD_SENTINEL = 'lc-custom:head:v1';
 var BODY_SENTINEL = 'lc-custom:body:v1';
 /* 内容版本号：改了任何段落内容就把这个数 +1。它同时是用户在版本徽章/弹窗里看到的版本号。 */
-var PATCH_VERSION = 24;
+var PATCH_VERSION = 27;
 var NODE_MODE = (typeof window === 'undefined' || typeof document === 'undefined');
 
 /* 历史 PATCH-MARK —— 每次重打前剥掉，兼容老版本注入块（含本文件旧版） */
@@ -1190,6 +1193,187 @@ html.dark #lc-pwnote{background:rgba(245,158,11,.12);border-color:rgba(245,158,1
   }
   if(!document.body) document.addEventListener('DOMContentLoaded', go);
   else go();
+})();
+</script>` },
+  { mark: 'delete-account-2026', target: 'body', html: String.raw`
+<style>
+/* PATCH-MARK: delete-account-2026 — 註銷賬戶入口與確認彈窗 */
+#lc-delacct-item{ color:#dc2626 !important; }
+#lc-delacct-item:hover{ background:rgba(220,38,38,.08) !important; }
+#lc-delacct-mask{
+  position:fixed;inset:0;z-index:99999;background:rgba(15,20,30,.55);
+  display:none;align-items:center;justify-content:center;
+}
+#lc-delacct-box{
+  width:min(440px,92vw);background:#fff;border:1px solid #fecaca;border-radius:14px;
+  padding:24px 26px;box-shadow:0 20px 60px rgba(0,0,0,.3);
+  font-family:"Segoe UI","Microsoft YaHei",sans-serif;color:#1f2937;box-sizing:border-box;
+}
+#lc-delacct-box h2{margin:0 0 10px;font-size:17px;color:#b91c1c;}
+#lc-delacct-box p{margin:0 0 8px;font-size:13.5px;line-height:1.7;color:#374151;}
+#lc-delacct-box ul{margin:0 0 14px;padding-left:18px;font-size:13px;color:#6b7280;line-height:1.8;}
+#lc-delacct-mail{
+  width:100%;box-sizing:border-box;padding:10px 12px;border-radius:8px;
+  border:1px solid #d1d5db;font-size:14px;outline:none;margin-top:6px;
+}
+#lc-delacct-mail:focus{border-color:#dc2626;}
+#lc-delacct-err{display:none;margin-top:8px;font-size:12.5px;color:#dc2626;}
+#lc-delacct-acts{display:flex;gap:10px;margin-top:18px;}
+#lc-delacct-acts button{flex:1;padding:11px;border-radius:9px;font-size:14px;font-weight:600;cursor:pointer;border:none;}
+#lc-delacct-cancel{background:#f3f4f6;color:#374151;}
+#lc-delacct-cancel:hover{background:#e5e7eb;}
+#lc-delacct-go{background:#dc2626;color:#fff;}
+#lc-delacct-go:disabled{background:#fca5a5;cursor:not-allowed;}
+#lc-delacct-go:not(:disabled):hover{background:#b91c1c;}
+</style>
+<div id="lc-delacct-mask">
+  <div id="lc-delacct-box">
+    <h2>⚠️ 註銷賬戶（不可恢復）</h2>
+    <p>註銷後將<b>永久刪除</b>本賬戶的全部數據，包括：</p>
+    <ul>
+      <li>賬戶與登錄密碼</li>
+      <li>全部對話與消息記錄</li>
+      <li>上傳的文件與個人設置</li>
+    </ul>
+    <p>此操作<b>無法撤銷</b>。如只想離開，請改用菜單裡的「註銷」（退出登錄）。</p>
+    <label style="font-size:13px;color:#374151;">請輸入你的登錄郵箱以確認：</label>
+    <input id="lc-delacct-mail" type="email" placeholder="name@mainplan.com.hk" autocomplete="off">
+    <div id="lc-delacct-err"></div>
+    <div id="lc-delacct-acts">
+      <button id="lc-delacct-cancel" type="button">取消</button>
+      <button id="lc-delacct-go" type="button" disabled>確認註銷</button>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+  var mask=document.getElementById('lc-delacct-mask');
+  if(!mask) return;
+  var mail=document.getElementById('lc-delacct-mail');
+  var err=document.getElementById('lc-delacct-err');
+  var goBtn=document.getElementById('lc-delacct-go');
+  var cancelBtn=document.getElementById('lc-delacct-cancel');
+  var busy=false;
+
+  function grabLoginEmail(){
+    var forms=document.querySelectorAll('form');
+    for(var i=0;i<forms.length;i++){
+      var pw=forms[i].querySelector('input[type="password"]');
+      if(!pw) continue;
+      var em=forms[i].querySelector('input[name="email"]');
+      var v=em && em.value ? em.value.trim().toLowerCase() : '';
+      if(v.indexOf('@')>0){
+        try{ localStorage.setItem('lc-user-email', v); }catch(e){}
+      }
+    }
+  }
+  function savedEmail(){
+    grabLoginEmail();
+    try{ return localStorage.getItem('lc-user-email') || ''; }catch(e){ return ''; }
+  }
+
+  /* 往頭像菜單（含「註銷」項的 role=menu）裡追加「註銷賬戶…」 */
+  var MENU_WATCH=0;
+  function injectMenuItem(){
+    var menus=document.querySelectorAll('[role="menu"]');
+    for(var i=0;i<menus.length;i++){
+      var menu=menus[i];
+      if(document.getElementById('lc-delacct-item')) return;
+      var items=menu.querySelectorAll('[role="menuitem"]');
+      var logoutItem=null;
+      for(var j=0;j<items.length;j++){
+        var txt=items[j].textContent.replace(/\s/g,'');
+        if(txt.indexOf('注销')>=0 || txt.indexOf('註銷')>=0 || /logout/i.test(txt)){ logoutItem=items[j]; }
+      }
+      if(!logoutItem) continue;
+      var li=document.createElement('div');
+      li.id='lc-delacct-item';
+      li.setAttribute('role','menuitem');
+      li.setAttribute('tabindex','-1');
+      li.textContent='🗑️ 註銷賬戶…';
+      li.style.cssText='display:flex;align-items:center;padding:8px 12px;cursor:pointer;font-size:13.5px;border-radius:6px;margin:2px 6px;';
+      (logoutItem.parentElement === menu ? menu : logoutItem.parentElement).insertBefore(li, logoutItem.nextSibling);
+      li.addEventListener('click', function(e){
+        e.stopPropagation();
+        e.preventDefault();
+        openDialog();
+      });
+      return;
+    }
+  }
+  new MutationObserver(function(){ injectMenuItem(); })
+    .observe(document.body, {childList:true, subtree:true});
+
+  function openDialog(){
+    mail.value='';
+    err.style.display='none';
+    goBtn.disabled=true;
+    mask.style.display='flex';
+    setTimeout(function(){ mail.focus(); }, 60);
+  }
+  function closeDialog(){ if(!busy) mask.style.display='none'; }
+  mail.addEventListener('input', function(){
+    var target=savedEmail();
+    goBtn.disabled = !(target && mail.value.trim().toLowerCase() === target);
+    if(!goBtn.disabled) err.style.display='none';
+  });
+  cancelBtn.addEventListener('click', closeDialog);
+  mask.addEventListener('click', function(e){ if(e.target===mask) closeDialog(); });
+
+  function jwtEmail(tok){
+    try{
+      var part = tok.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');
+      while (part.length % 4) part += '=';
+      return JSON.parse(atob(part)).email || null;
+    }catch(e){ return null; }
+  }
+  goBtn.addEventListener('click', function(){
+    if(busy) return;
+    busy=true;
+    goBtn.disabled=true;
+    goBtn.textContent='正在註銷…';
+    err.style.display='none';
+    /* access token 只存內存；refresh 端點換取 token。輪換式刷新會打斷 SPA 會話，
+       但註銷本來就會登出，無影響。 */
+    fetch('/api/auth/refresh',{method:'POST',credentials:'same-origin'})
+      .then(function(r){ return r.ok ? r.json() : Promise.reject('會話已過期，請重新登錄後再試。'); })
+      .then(function(d){
+        /* 關鍵防護：刪除接口刪的是「當前會話用戶」。必須校驗會話身份與輸入郵箱一致，
+           否則瀏覽器殘留別人的會話時會誤刪他人的賬戶。 */
+        var sess = jwtEmail(d.token);
+        var want = mail.value.trim().toLowerCase();
+        if(!sess || sess !== want){
+          throw '當前登錄的是 ' + (sess || '未知賬戶') + '，與輸入郵箱不一致。請先退出登錄，再用要註銷的賬戶登錄後重試。';
+        }
+        return fetch('/api/user/delete',{
+          method:'DELETE',
+          headers:{'Authorization':'Bearer '+d.token,'Content-Type':'application/json'},
+          body:'{}'
+        }).then(function(r){
+          if(!r.ok){
+            return r.json().catch(function(){ return {}; }).then(function(d2){
+              throw (d2 && d2.message) ? d2.message : ('註銷失敗（'+r.status+'），請聯繫管理員。');
+            });
+          }
+          /* 刪除成功：清掉本瀏覽器殘留會話，避免「已刪賬戶」的半失效狀態 */
+          return fetch('/api/auth/logout',{
+            method:'POST',
+            headers:{'Authorization':'Bearer '+d.token},
+            credentials:'same-origin'
+          }).catch(function(){}).then(function(){
+            try{ localStorage.removeItem('lc-user-email'); }catch(e){}
+            location.replace(location.origin+'/login');
+          });
+        });
+      })
+      .catch(function(msg){
+        err.textContent=String(msg);
+        err.style.display='block';
+        busy=false;
+        goBtn.disabled=false;
+        goBtn.textContent='確認註銷';
+      });
+  });
 })();
 </script>` }
 ];
