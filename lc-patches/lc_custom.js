@@ -36,8 +36,8 @@
  *                               弹确认框(需输入登录邮箱才能确认)，调官方
  *                               DELETE /api/user/delete 级联删除账户全部数据后跳登录页
  *
- * 版本约定：PATCH_VERSION 就是用户所见的版本号——每次改内容 +1；
- * deploy_lc_patches.py 发布时把它写进 /picasso-version.txt，
+ * 版本约定：PATCH_VERSION 是用户所见的语义化版本号('1.1.34')——每次改内容最后一位 +1
+ * (1.1.34→1.1.35)；deploy_lc_patches.py 发布时把它写进 /picasso-version.txt，
  * 所有打开着的旧页面会在 60 秒内弹「有新版本」，用户点「立即更新」/点徽章才刷新。
  * 段落用 String.raw 包裹——反斜杠原样保留；仍不要引入反引号 ` 和 ${ 字符，必要时转义。
  * ==========================================================================*/
@@ -45,7 +45,7 @@
 var HEAD_SENTINEL = 'lc-custom:head:v1';
 var BODY_SENTINEL = 'lc-custom:body:v1';
 /* 内容版本号：改了任何段落内容就把这个数 +1。它同时是用户在版本徽章/弹窗里看到的版本号。 */
-var PATCH_VERSION = 34;
+var PATCH_VERSION = '1.1.34';  /* 语义化版本:最后一位随补丁发布递增(1.1.34→1.1.35) */
 var NODE_MODE = (typeof window === 'undefined' || typeof document === 'undefined');
 
 /* 历史 PATCH-MARK —— 每次重打前剥掉，兼容老版本注入块（含本文件旧版） */
@@ -779,10 +779,10 @@ button[data-artifact-trigger]::after{
    「稍後」靜默 1 小時。右下角常駐版本徽章：平時顯示當前版本號，有更新變橙色，
    點擊隨時手動檢查/喚出更新卡片（不受「稍後」靜默影響）。MINE 由注入器替换。 */
 (function(){
-  var MINE=__PATCH_VERSION__, KEY='lc-update-snooze';
+  var MINE='__PATCH_VERSION__', KEY='lc-update-snooze';
   var card=null, pill=null, LATEST=MINE;
   function fmtPill(){
-    if(LATEST>MINE){
+    if(LATEST!==MINE){
       pill.textContent='v'+MINE+' ↑ v'+LATEST;
       pill.classList.add('lc-ver-up');
       pill.title='有新版本 v'+LATEST+'！點擊更新';
@@ -813,10 +813,10 @@ button[data-artifact-trigger]::after{
     fetch('/picasso-version.txt?ts='+Date.now(), {cache:'no-store'})
       .then(function(r){ return r.ok ? r.text() : ''; })
       .then(function(t){
-        var v=parseInt((t||'').trim(),10);
-        if(!isNaN(v)) LATEST=v;
+        var v=(t||'').trim();
+        if(v) LATEST=v;
         fmtPill();
-        if(isNaN(v) || v<=MINE){
+        if(!v || v===MINE){
           if(fromUser){
             pill.textContent='✓ 已是最新';
             setTimeout(fmtPill, 1500);
@@ -843,7 +843,7 @@ button[data-artifact-trigger]::after{
       setInterval(function(){ check(false); }, 60000);
     }
   }
-  if(MINE>0){ mount(); }
+  if(MINE){ mount(); }
 })();
 </script>` },
   { mark: 'dev-badge-2026', target: 'body', html: String.raw`

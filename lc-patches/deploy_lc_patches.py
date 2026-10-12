@@ -45,7 +45,7 @@ if not os.path.exists(SRC):
     sys.exit(f'[deploy] missing {SRC}')
 
 src = open(SRC, encoding='utf-8').read()
-m = re.search(r'PATCH_VERSION\s*=\s*(\d+)', src)
+m = re.search(r"PATCH_VERSION\s*=\s*['\"]([\w.]+)['\"]", src)
 if not m:
     sys.exit('[deploy] 无法从 lc_custom.js 读到 PATCH_VERSION')
 VER = m.group(1)
@@ -63,7 +63,7 @@ sh(['scp', '-q', SRC, f'{HOST}:{REMOTE_JS}'])
 # 自检：nginx 是否在分发新文件（no-cache 头 + 内容含本次版本号）
 rc, head, err = run(['ssh', '-o', 'BatchMode=yes', HOST,
                      f'curl -s {CURL_K}-m 8 -D - -o /dev/null {SELFCHECK} | grep -i "cache-control"; '
-                     f'curl -s {CURL_K}-m 8 {SELFCHECK} | grep -o "PATCH_VERSION = [0-9]*" | head -1'])
+                     f"curl -s {CURL_K}-m 8 {SELFCHECK} | grep -oE \"PATCH_VERSION = '[^']*'\" | head -1"])
 if rc != 0 or VER not in head:
     print(head or err)
     sys.exit(f'[deploy{TAG}] nginx 未分发新文件——检查 nginx 配置/是否 reload')
