@@ -70,6 +70,7 @@ else
 fi
 
 step patch_fp_2026.py
+step patch_emptytext_v1.py
 
 echo "—— 语法校验 ——"
 for f in "$API" "$AG/cron/lifecycle_guard.py" "$AG/tools/terminal_tool.py"; do
