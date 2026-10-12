@@ -47,7 +47,7 @@
 var HEAD_SENTINEL = 'lc-custom:head:v1';
 var BODY_SENTINEL = 'lc-custom:body:v1';
 /* 内容版本号：改了任何段落内容就把这个数 +1。它同时是用户在版本徽章/弹窗里看到的版本号。 */
-var PATCH_VERSION = '1.1.36';  /* 语义化版本:最后一位随补丁发布递增(1.1.34→1.1.35) */
+var PATCH_VERSION = '1.1.37';  /* 语义化版本:最后一位随补丁发布递增(1.1.34→1.1.35) */
 var NODE_MODE = (typeof window === 'undefined' || typeof document === 'undefined');
 
 /* 历史 PATCH-MARK —— 每次重打前剥掉，兼容老版本注入块（含本文件旧版） */
@@ -1104,7 +1104,7 @@ html.dark #lc-pwnote{background:rgba(245,158,11,.12);border-color:rgba(245,158,1
 #lc-pwnote .lc-pw-btn:hover{background:#d97706;}
 </style>
 <div id="lc-pwnote">
-  <span>⚠️ 你仍在使用<b>初始密码</b>，为了账号安全，请尽快修改密码。</span>
+  <span>⚠️ 你仍在使用<b>初始密碼</b>，為了賬號安全，請盡快修改密碼。</span>
   <button class="lc-pw-btn" type="button">立即修改</button>
 </div>
 <script>
@@ -1239,15 +1239,15 @@ html.dark #lc-pwnote{background:rgba(245,158,11,.12);border-color:rgba(245,158,1
 </style>
 <div id="lc-delacct-mask">
   <div id="lc-delacct-box">
-    <h2>⚠️ 注销账户（不可恢复）</h2>
-    <p>注销后将<b>永久删除</b>本账户的全部数据，包括：</p>
+    <h2>⚠️ 註銷賬戶（不可恢復）</h2>
+    <p>註銷後將<b>永久刪除</b>本賬戶的全部數據，包括：</p>
     <ul>
-      <li>账户与登录密码</li>
-      <li>全部对话与消息记录</li>
-      <li>上传的文件与个人设置</li>
+      <li>賬戶與登入密碼</li>
+      <li>全部對話與訊息記錄</li>
+      <li>上傳的文件與個人設定</li>
     </ul>
-    <p>此操作<b>无法撤销</b>。如只想离开，请改用菜单里的「退出账户」（仅退出登录，不删数据）。</p>
-    <label style="font-size:13px;color:#374151;">請輸入你的登錄郵箱以確認：</label>
+    <p>此操作<b>無法撤銷</b>。如只想離開，請改用菜單裡的「退出賬戶」（僅退出登入，不刪數據）。</p>
+    <label style="font-size:13px;color:#374151;">請輸入你的登入電郵以確認：</label>
     <input id="lc-delacct-mail" type="email" placeholder="name@mainplan.com.hk" autocomplete="off">
     <div id="lc-delacct-err"></div>
     <div id="lc-delacct-acts">
@@ -1305,13 +1305,13 @@ html.dark #lc-pwnote{background:rgba(245,158,11,.12);border-color:rgba(245,158,1
       for(var j=0;j<items.length;j++){
         var txt=items[j].textContent.replace(/\s/g,'');
         /* 界面语言简繁并存：简中「注销」/ 繁中「登出」(LibreChat 繁中把 logout 译作登出，不含注销字样) / 英文 Log out */
-        if(txt.indexOf('注销')>=0 || txt.indexOf('註銷')>=0 || txt.indexOf('登出')>=0 || txt.indexOf('退出账户')>=0 || /logout/i.test(txt)){ logoutItem=items[j]; }
+        if(txt.indexOf('注销')>=0 || txt.indexOf('註銷')>=0 || txt.indexOf('登出')>=0 || txt.indexOf('退出账户')>=0 || txt.indexOf('退出賬戶')>=0 || /logout/i.test(txt)){ logoutItem=items[j]; }
       }
       if(!logoutItem) continue;
       /* 自帶「注销」只表示退出登錄，改名「退出账户」與「注销账户」區分（React 重渲染會還原，Observer 每次重打） */
       (function relabel(node){
         if(node.nodeType===3){
-          node.textContent=node.textContent.replace(/注销|註銷|登出/g,'退出账户');
+          node.textContent=node.textContent.replace(/注销|註銷|登出/g,'退出賬戶');
           return;
         }
         for(var k=0;k<node.childNodes.length;k++) relabel(node.childNodes[k]);
@@ -1320,7 +1320,7 @@ html.dark #lc-pwnote{background:rgba(245,158,11,.12);border-color:rgba(245,158,1
       li.id='lc-delacct-item';
       li.setAttribute('role','menuitem');
       li.setAttribute('tabindex','-1');
-      li.textContent='🗑️ 注销账户…';
+      li.textContent='🗑️ 註銷賬戶…';
       li.style.cssText='display:flex;align-items:center;padding:8px 12px;cursor:pointer;font-size:13.5px;border-radius:6px;margin:2px 6px;';
       (logoutItem.parentElement === menu ? menu : logoutItem.parentElement).insertBefore(li, logoutItem);
       li.addEventListener('click', function(e){
