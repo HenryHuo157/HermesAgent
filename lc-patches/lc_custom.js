@@ -32,6 +32,8 @@
  *   [body] default-model-2026   🎯 新用户默认选中 Hermes/hermes-agent：裸 /c/new 且从没
  *                               手动选过模型(lastSelectedModel 为空)时，自动带
  *                               ?endpoint=&model=hermes-agent 参数进入，不用手动选
+ *   [body] image-actions-2026   🖼️ 聊天圖片下方快捷操作條：每張圖片(消息內 Image 組件)下
+ *                               常駐小圖標——複製到剪貼板/下載/新窗口查看原圖，免右鍵
  *   [body] delete-account-2026  🗑️ 注销账户：头像菜单「注销」下追加红色「注销账户…」，
  *                               弹确认框(需输入登录邮箱才能确认)，调官方
  *                               DELETE /api/user/delete 级联删除账户全部数据后跳登录页
@@ -45,7 +47,7 @@
 var HEAD_SENTINEL = 'lc-custom:head:v1';
 var BODY_SENTINEL = 'lc-custom:body:v1';
 /* 内容版本号：改了任何段落内容就把这个数 +1。它同时是用户在版本徽章/弹窗里看到的版本号。 */
-var PATCH_VERSION = '1.1.34';  /* 语义化版本:最后一位随补丁发布递增(1.1.34→1.1.35) */
+var PATCH_VERSION = '1.1.35';  /* 语义化版本:最后一位随补丁发布递增(1.1.34→1.1.35) */
 var NODE_MODE = (typeof window === 'undefined' || typeof document === 'undefined');
 
 /* 历史 PATCH-MARK —— 每次重打前剥掉，兼容老版本注入块（含本文件旧版） */
@@ -1402,6 +1404,121 @@ html.dark #lc-pwnote{background:rgba(245,158,11,.12);border-color:rgba(245,158,1
         goBtn.textContent='確認註銷';
       });
   });
+})();
+</script>` },
+  { mark: 'image-actions-2026', target: 'body', html: String.raw`
+<style>
+/* PATCH-MARK: image-actions-2026 — 聊天圖片下方快捷操作條（複製/下載/原圖，免右鍵） */
+.lc-imgacts{
+  display:flex;align-items:center;gap:2px;margin:6px 0 2px;
+  width:max-content;padding:3px 5px;border-radius:10px;
+  background:rgba(120,130,145,.08);border:1px solid rgba(120,130,145,.18);
+}
+.lc-imgacts button{
+  display:inline-flex;align-items:center;justify-content:center;
+  border:none;background:transparent;cursor:pointer;
+  color:#4b5563;padding:5px 7px;border-radius:7px;
+}
+html.dark .lc-imgacts button{color:#cbd5e1;}
+.lc-imgacts button:hover{background:rgba(120,130,145,.2);}
+.lc-imgacts button.lc-ia-ok{color:#059669;}
+.lc-imgacts button.lc-ia-bad{color:#dc2626;}
+.lc-imgacts svg{width:15px;height:15px;display:block;}
+</style>
+<script>
+(function(){
+  var SEL='button[aria-label^="View "][aria-label*=" in dialog"] > img';
+  var ICONS={
+    copy:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>',
+    download:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 11 5 5 5-5"/><path d="M4 21h16"/></svg>',
+    open:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6"/><path d="M20 4 11 13"/><path d="M19 13v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h6"/></svg>'
+  };
+  function flash(btn, ok){
+    btn.classList.remove('lc-ia-ok','lc-ia-bad');
+    btn.classList.add(ok ? 'lc-ia-ok' : 'lc-ia-bad');
+    var old=btn.title;
+    btn.title = ok ? '✓ 已完成' : '✗ 失敗，請改用右鍵';
+    setTimeout(function(){ btn.classList.remove('lc-ia-ok','lc-ia-bad'); btn.title=old; }, 1300);
+  }
+  function toPng(blob){
+    return new Promise(function(res, rej){
+      try{
+        var img=new Image(), u=URL.createObjectURL(blob);
+        img.onload=function(){
+          var c=document.createElement('canvas');
+          c.width=img.naturalWidth||300; c.height=img.naturalHeight||300;
+          c.getContext('2d').drawImage(img,0,0);
+          URL.revokeObjectURL(u);
+          c.toBlob(function(b){ b?res(b):rej(); }, 'image/png');
+        };
+        img.onerror=function(){ URL.revokeObjectURL(u); rej(); };
+        img.src=u;
+      }catch(e){ rej(); }
+    });
+  }
+  function act(kind, src, btn){
+    if(kind==='open'){ window.open(src, '_blank'); return; }
+    fetch(src, {credentials:'same-origin'})
+      .then(function(r){ if(!r.ok) throw new Error(r.status); return r.blob(); })
+      .then(function(blob){
+        if(kind==='download'){
+          var name=(src.split('?')[0].split('/').pop()||'').toLowerCase();
+          if(name.indexOf('.')<0) name='picasso-image.png';
+          var a=document.createElement('a');
+          a.href=URL.createObjectURL(blob); a.download=name;
+          document.body.appendChild(a); a.click(); a.remove();
+          setTimeout(function(){ URL.revokeObjectURL(a.href); }, 5000);
+          flash(btn, true);
+          return null;
+        }
+        return toPng(blob).then(function(png){
+          if(!navigator.clipboard || !window.ClipboardItem) throw new Error('unsupported');
+          return navigator.clipboard.write([new ClipboardItem({'image/png': png})]);
+        }).then(function(){ flash(btn, true); });
+      })
+      .catch(function(){
+        flash(btn, false);
+        if(kind==='copy') setTimeout(function(){ alert('複製失敗：目前瀏覽器環境不支援一鍵複製，請用右鍵選「複製影像」，或點「下載」。'); }, 50);
+      });
+  }
+  function makeActs(src){
+    var bar=document.createElement('div');
+    bar.className='lc-imgacts';
+    [['copy','複製圖片'],['download','下載圖片'],['open','新窗口查看原圖']].forEach(function(d){
+      var el=document.createElement('button');
+      el.type='button';
+      el.title=d[1];
+      el.dataset.act=d[0];
+      el.innerHTML=ICONS[d[0]];
+      bar.appendChild(el);
+    });
+    bar.addEventListener('click', function(e){
+      var t=e.target.closest ? e.target.closest('button') : null;
+      if(!t || !t.dataset.act) return;
+      act(t.dataset.act, src, t);
+    });
+    return bar;
+  }
+  function scan(){
+    var imgs=document.querySelectorAll(SEL);
+    for(var i=0;i<imgs.length;i++){
+      var img=imgs[i];
+      if(img.dataset.lcActs==='1') continue;
+      var btn=img.closest('button');
+      if(!btn || !btn.parentNode) continue;
+      var nx=btn.nextElementSibling;
+      if(nx && nx.classList && nx.classList.contains('lc-imgacts')){ img.dataset.lcActs='1'; continue; }
+      img.dataset.lcActs='1';
+      btn.insertAdjacentElement('afterend', makeActs(img.src));
+    }
+  }
+  var t=null;
+  new MutationObserver(function(){
+    if(t) return;
+    t=setTimeout(function(){ t=null; scan(); }, 300);
+  }).observe(document.body, {childList:true, subtree:true});
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', scan);
+  else scan();
 })();
 </script>` }
 ];
