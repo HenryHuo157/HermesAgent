@@ -65,6 +65,8 @@ description: 畢卡索（Picasso AI，仓库 X:\Henry Huo\Hermes Agents）的 De
 - 登录按钮 `type=button`，原生 submit 事件不触发；补丁监听 document 捕获阶段 click/Enter 抓登录表单值
 - 内置删除接口 `DELETE /api/user/delete` 删的是**当前会话用户**，不是"表单里填的用户"——任何删除/敏感操作必须先校验会话身份与用户输入一致（曾因此误删 Dev 账号）
 - 内置"注销"菜单=退出登录；自建"注销账户"=删号，两者菜单文案必须区分
+- **界面语言简繁并存**：简中"注销"、繁中"登出"（LibreChat 繁中把 logout 译作登出，不含注销字样）——菜单匹配/改名必须覆盖 注销|註銷|登出|退出账户|Log out；Dev 是简中界面，繁中路径要用构造 DOM 的方式单独验证
+- **MutationObserver 自毁循环**：注入节点/改名本身会再触发 Observer——若"已存在检查"只认旧特征（改名后的项不再匹配）或存在清理逻辑删掉刚注入的节点，会出现"第一次成功、之后永远失败/注入即消失"；幂等判据必须兼容自己改过后的状态，禁止移除非本容器的节点
 
 **前端补丁（lc_custom.js）**
 - 双模式单文件：浏览器经 nginx `/lc_custom.js`（no-cache）加载；段=SECTIONS 数组，`String.raw` 包裹，**段内禁用反引号和 `${`**

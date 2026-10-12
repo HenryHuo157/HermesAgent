@@ -45,7 +45,7 @@
 var HEAD_SENTINEL = 'lc-custom:head:v1';
 var BODY_SENTINEL = 'lc-custom:body:v1';
 /* 内容版本号：改了任何段落内容就把这个数 +1。它同时是用户在版本徽章/弹窗里看到的版本号。 */
-var PATCH_VERSION = 30;
+var PATCH_VERSION = 34;
 var NODE_MODE = (typeof window === 'undefined' || typeof document === 'undefined');
 
 /* 历史 PATCH-MARK —— 每次重打前剥掉，兼容老版本注入块（含本文件旧版） */
@@ -1297,19 +1297,19 @@ html.dark #lc-pwnote{background:rgba(245,158,11,.12);border-color:rgba(245,158,1
     var menus=document.querySelectorAll('[role="menu"]');
     for(var i=0;i<menus.length;i++){
       var menu=menus[i];
-      if(document.getElementById('lc-delacct-item')) return;
+      if(menu.querySelector('#lc-delacct-item')) continue;  /* 本菜单已处理，继续看其他菜单 */
       var items=menu.querySelectorAll('[role="menuitem"]');
       var logoutItem=null;
       for(var j=0;j<items.length;j++){
         var txt=items[j].textContent.replace(/\s/g,'');
-        if(txt.indexOf('注销')>=0 || txt.indexOf('註銷')>=0 || /logout/i.test(txt)){ logoutItem=items[j]; }
+        /* 界面语言简繁并存：简中「注销」/ 繁中「登出」(LibreChat 繁中把 logout 译作登出，不含注销字样) / 英文 Log out */
+        if(txt.indexOf('注销')>=0 || txt.indexOf('註銷')>=0 || txt.indexOf('登出')>=0 || txt.indexOf('退出账户')>=0 || /logout/i.test(txt)){ logoutItem=items[j]; }
       }
       if(!logoutItem) continue;
       /* 自帶「注销」只表示退出登錄，改名「退出账户」與「注销账户」區分（React 重渲染會還原，Observer 每次重打） */
       (function relabel(node){
         if(node.nodeType===3){
-          if(node.textContent.indexOf('注销')>=0){ node.textContent=node.textContent.replace(/注销/g,'退出账户'); }
-          if(node.textContent.indexOf('註銷')>=0 && node.textContent.indexOf('退出')<0){ node.textContent=node.textContent.replace(/註銷/g,'退出账户'); }
+          node.textContent=node.textContent.replace(/注销|註銷|登出/g,'退出账户');
           return;
         }
         for(var k=0;k<node.childNodes.length;k++) relabel(node.childNodes[k]);
@@ -1326,7 +1326,7 @@ html.dark #lc-pwnote{background:rgba(245,158,11,.12);border-color:rgba(245,158,1
         e.preventDefault();
         openDialog();
       });
-      return;
+      return;  /* 已注入到第一个含退出项的菜单，完成 */
     }
   }
   new MutationObserver(function(){ injectMenuItem(); })
