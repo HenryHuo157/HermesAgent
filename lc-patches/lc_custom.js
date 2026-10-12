@@ -45,7 +45,7 @@
 var HEAD_SENTINEL = 'lc-custom:head:v1';
 var BODY_SENTINEL = 'lc-custom:body:v1';
 /* 内容版本号：改了任何段落内容就把这个数 +1。它同时是用户在版本徽章/弹窗里看到的版本号。 */
-var PATCH_VERSION = 27;
+var PATCH_VERSION = 28;
 var NODE_MODE = (typeof window === 'undefined' || typeof document === 'undefined');
 
 /* 历史 PATCH-MARK —— 每次重打前剥掉，兼容老版本注入块（含本文件旧版） */
@@ -656,7 +656,7 @@ button[data-artifact-trigger]::after{
 <style>
 /* PATCH-MARK: usage-link-2026c — 用量統計懸浮貼籤（可拖動，鬆手吸附左邊） */
 #lc-usagebtn{
-  position:fixed;left:0;top:58%;z-index:9999;
+  position:fixed;left:0;top:58%;z-index:9999;display:none;
   width:30px;height:52px;
   border:none;border-radius:0 12px 12px 0;
   background:linear-gradient(160deg,#ff7a29,#E8590C);
@@ -678,6 +678,15 @@ button[data-artifact-trigger]::after{
 (function(){
   var b=document.getElementById('lc-usagebtn');
   if(!b) return;
+  /* 用量入口僅管理員可見（白名單郵箱，與 lc-user-email 登錄記錄比對） */
+  var USAGE_ADMINS=['henryhuo@mainplan.com.hk'];
+  function refreshVis(){
+    var em=null;
+    try{ em=localStorage.getItem('lc-user-email'); }catch(e){}
+    b.style.display = (em && USAGE_ADMINS.indexOf(em)>=0) ? 'flex' : 'none';
+  }
+  refreshVis();
+  setInterval(refreshVis, 5000);
   var KEY='lc-usage-tab-top';
   function clampTop(t){
     var h=b.offsetHeight||52, min=8, max=window.innerHeight-h-8;
@@ -1093,7 +1102,7 @@ html.dark #lc-pwnote{background:rgba(245,158,11,.12);border-color:rgba(245,158,1
 #lc-pwnote .lc-pw-btn:hover{background:#d97706;}
 </style>
 <div id="lc-pwnote">
-  <span>⚠️ 你仍在使用<b>初始密碼</b>，為了帳號安全，請盡快修改密碼。</span>
+  <span>⚠️ 你仍在使用<b>初始密码</b>，为了账号安全，请尽快修改密码。</span>
   <button class="lc-pw-btn" type="button">立即修改</button>
 </div>
 <script>
@@ -1228,14 +1237,14 @@ html.dark #lc-pwnote{background:rgba(245,158,11,.12);border-color:rgba(245,158,1
 </style>
 <div id="lc-delacct-mask">
   <div id="lc-delacct-box">
-    <h2>⚠️ 註銷賬戶（不可恢復）</h2>
-    <p>註銷後將<b>永久刪除</b>本賬戶的全部數據，包括：</p>
+    <h2>⚠️ 注销账户（不可恢复）</h2>
+    <p>注销后将<b>永久删除</b>本账户的全部数据，包括：</p>
     <ul>
-      <li>賬戶與登錄密碼</li>
-      <li>全部對話與消息記錄</li>
-      <li>上傳的文件與個人設置</li>
+      <li>账户与登录密码</li>
+      <li>全部对话与消息记录</li>
+      <li>上传的文件与个人设置</li>
     </ul>
-    <p>此操作<b>無法撤銷</b>。如只想離開，請改用菜單裡的「註銷」（退出登錄）。</p>
+    <p>此操作<b>无法撤销</b>。如只想离开，请改用菜单里的「退出账户」（仅退出登录，不删数据）。</p>
     <label style="font-size:13px;color:#374151;">請輸入你的登錄郵箱以確認：</label>
     <input id="lc-delacct-mail" type="email" placeholder="name@mainplan.com.hk" autocomplete="off">
     <div id="lc-delacct-err"></div>
@@ -1286,11 +1295,20 @@ html.dark #lc-pwnote{background:rgba(245,158,11,.12);border-color:rgba(245,158,1
         if(txt.indexOf('注销')>=0 || txt.indexOf('註銷')>=0 || /logout/i.test(txt)){ logoutItem=items[j]; }
       }
       if(!logoutItem) continue;
+      /* 自帶「注销」只表示退出登錄，改名「退出账户」與「注销账户」區分（React 重渲染會還原，Observer 每次重打） */
+      (function relabel(node){
+        if(node.nodeType===3){
+          if(node.textContent.indexOf('注销')>=0){ node.textContent=node.textContent.replace(/注销/g,'退出账户'); }
+          if(node.textContent.indexOf('註銷')>=0 && node.textContent.indexOf('退出')<0){ node.textContent=node.textContent.replace(/註銷/g,'退出账户'); }
+          return;
+        }
+        for(var k=0;k<node.childNodes.length;k++) relabel(node.childNodes[k]);
+      })(logoutItem);
       var li=document.createElement('div');
       li.id='lc-delacct-item';
       li.setAttribute('role','menuitem');
       li.setAttribute('tabindex','-1');
-      li.textContent='🗑️ 註銷賬戶…';
+      li.textContent='🗑️ 注销账户…';
       li.style.cssText='display:flex;align-items:center;padding:8px 12px;cursor:pointer;font-size:13.5px;border-radius:6px;margin:2px 6px;';
       (logoutItem.parentElement === menu ? menu : logoutItem.parentElement).insertBefore(li, logoutItem.nextSibling);
       li.addEventListener('click', function(e){
