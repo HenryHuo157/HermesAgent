@@ -45,7 +45,7 @@
 var HEAD_SENTINEL = 'lc-custom:head:v1';
 var BODY_SENTINEL = 'lc-custom:body:v1';
 /* 内容版本号：改了任何段落内容就把这个数 +1。它同时是用户在版本徽章/弹窗里看到的版本号。 */
-var PATCH_VERSION = 28;
+var PATCH_VERSION = 30;
 var NODE_MODE = (typeof window === 'undefined' || typeof document === 'undefined');
 
 /* 历史 PATCH-MARK —— 每次重打前剥掉，兼容老版本注入块（含本文件旧版） */
@@ -1284,6 +1284,16 @@ html.dark #lc-pwnote{background:rgba(245,158,11,.12);border-color:rgba(245,158,1
   /* 往頭像菜單（含「註銷」項的 role=menu）裡追加「註銷賬戶…」 */
   var MENU_WATCH=0;
   function injectMenuItem(){
+    /* 菜單內的 note 是 LibreChat 渲染的當前會話郵箱——補寫登錄記錄，讓 hook 上線前
+       就已登錄的老會話也能被白名單/提醒邏輯識別。必須放在 item 存在檢查之前：
+       Radix 菜單漸進渲染，note 可能晚於 menuitem 出現，若提前 return 就永遠讀不到。 */
+    try{
+      var notes=document.querySelectorAll('[role="menu"] [role="note"]');
+      for(var n=0;n<notes.length;n++){
+        var nv=notes[n].textContent.trim().toLowerCase();
+        if(nv.indexOf('@')>0){ localStorage.setItem('lc-user-email', nv); break; }
+      }
+    }catch(e){}
     var menus=document.querySelectorAll('[role="menu"]');
     for(var i=0;i<menus.length;i++){
       var menu=menus[i];
