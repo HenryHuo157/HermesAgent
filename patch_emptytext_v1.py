@@ -24,14 +24,14 @@ if 'PATCH-EMPTYTEXT-V1' in src:
 
 shutil.copy(P, P + '.bak-emptytext-' + stamp)
 
-# ---- A. _emit 状态：累计全部输出文本 ----
-anchor_a = '''                    if not hasattr(_emit, "_lbuf"):
-                        _emit._lbuf = ""'''
-replacement_a = '''                    if not hasattr(_emit, "_lbuf"):
-                        _emit._lbuf = ""
-                    if not hasattr(_emit, "_out_all"):
-                        _emit._out_all = ""'''
-assert anchor_a in src, 'A anchor (_lbuf init) not found'
+# ---- A. _emit 状态：累计全部输出文本（初始化必须在 _emit 函数体最开头——工具活动
+# 事件早于正文分支到达，若初始化放在正文分支内，首个工具事件会因函数对象缺少
+# _out_all 属性而 AttributeError，并使整条 SSE 流崩溃）----
+anchor_a = '''                if isinstance(item, tuple) and len(item) == 2 and item[0] == "__tool_progress__":'''
+replacement_a = '''                if not hasattr(_emit, "_out_all"):
+                    _emit._out_all = ""
+                if isinstance(item, tuple) and len(item) == 2 and item[0] == "__tool_progress__":'''
+assert anchor_a in src, 'A anchor (_emit head) not found'
 src = src.replace(anchor_a, replacement_a, 1)
 
 # ---- B. think 工具活动行写出前累计 ----
@@ -60,7 +60,8 @@ anchor_c = '''                    content_chunk = {
                         "choices": [{"index": 0, "delta": {"content": _item}, "finish_reason": None}],
                     }
                     await response.write(f"data: {json.dumps(content_chunk)}\\n\\n".encode())'''
-replacement_c = '''                    _emit._out_all += _item
+replacement_c = '''                    if isinstance(_item, str):
+                        _emit._out_all += _item
                     content_chunk = {
                         "id": completion_id, "object": "chat.completion.chunk",
                         "created": created, "model": model,
