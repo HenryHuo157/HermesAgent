@@ -47,7 +47,7 @@
 var HEAD_SENTINEL = 'lc-custom:head:v1';
 var BODY_SENTINEL = 'lc-custom:body:v1';
 /* 内容版本号：改了任何段落内容就把这个数 +1。它同时是用户在版本徽章/弹窗里看到的版本号。 */
-var PATCH_VERSION = '1.1.38';  /* 语义化版本:最后一位随补丁发布递增(1.1.34→1.1.35) */
+var PATCH_VERSION = '1.1.39';  /* 语义化版本:最后一位随补丁发布递增(1.1.34→1.1.35) */
 var NODE_MODE = (typeof window === 'undefined' || typeof document === 'undefined');
 
 /* 历史 PATCH-MARK —— 每次重打前剥掉，兼容老版本注入块（含本文件旧版） */
@@ -1197,7 +1197,12 @@ html.dark #lc-pwnote{background:rgba(245,158,11,.12);border-color:rgba(245,158,1
       setTimeout(go, 2000);
       return;
     }
-    /* 系統僅有 Hermes 一個可用 endpoint,統一默認選中,不再尊重歷史選擇 */
+    /* 每個標籤頁只 replace 一次(sessionStorage 標記)——SPA 會清掉 URL 參數,
+       無標記的話會被再次 replace,形成刷新死循環(v1.1.38 生產事故) */
+    try{
+      if(sessionStorage.getItem('lc-dm-done')) return;
+      sessionStorage.setItem('lc-dm-done','1');
+    }catch(e){}
     location.replace('/c/new?endpoint='+encodeURIComponent(EP)+'&model=hermes-agent');
   }
   if(!document.body) document.addEventListener('DOMContentLoaded', go);
