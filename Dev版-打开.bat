@@ -22,7 +22,7 @@ if errorlevel 1 (
 
 echo.
 echo [3/3] Opening tunnel + browser...
-start "picasso-dev-tunnel" ssh -N -L 3082:127.0.0.1:3082 root@47.243.79.144
+start "picasso-dev-tunnel" "%~dp0picasso-dev-tunnel.bat"
 timeout /t 2 /nobreak >nul
 start http://localhost:3082
 
